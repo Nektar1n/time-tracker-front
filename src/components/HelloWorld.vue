@@ -21,8 +21,8 @@
             <div class="d-flex align-center ga-2">
               <v-btn
                 :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
-                :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
                 size="x-small"
+                :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
                 variant="text"
                 @click.stop="toggleTimer(event.id)"
               />
@@ -53,8 +53,11 @@
             variant="tonal"
           >
             <event-calendar
+              ref="eventCalendarRef"
               :events="events"
+              :scroll-sync="scrollSync"
               :selected-date="selectedDate"
+              @sync-scroll="syncScroll"
               @update:events="setAllEvents"
               @update:selected-date="setSelectedDate"
             />
@@ -64,7 +67,9 @@
           <day-events
             ref="dayEventsRef"
             :events="events"
+            :scroll-sync="scrollSync"
             :selected-date="selectedDate"
+            @sync-scroll="syncScroll"
             @update:events="setAllEvents"
           />
         </v-col>
@@ -74,84 +79,91 @@
 </template>
 
 <script>
-import DayEvents from "./DayEvents.vue";
-import EventCalendar from "./EventCalendar.vue";
+  import DayEvents from './DayEvents.vue'
+  import EventCalendar from './EventCalendar.vue'
 
-export default {
-  name: "HelloWorld",
-  components: { DayEvents, EventCalendar },
-  data: () => ({
-    events: [],
-    selectedDate: new Date(),
-    timerTick: Date.now(),
-    ticker: null,
-  }),
-  computed: {
-    activeEvents() {
-      return this.events.filter(
-        (item) => !item.isCompleted && (item.isRunning || (item.elapsedMs || 0) > 0),
-      );
+  export default {
+    name: 'HelloWorld',
+    components: { DayEvents, EventCalendar },
+    data: () => ({
+      events: [],
+      selectedDate: new Date(),
+      scrollSync: null,
+      timerTick: Date.now(),
+      ticker: null,
+    }),
+    computed: {
+      activeEvents () {
+        return this.events.filter(
+          item => !item.isCompleted && (item.isRunning || (item.elapsedMs || 0) > 0),
+        )
+      },
     },
-  },
-  mounted() {
-    this.ticker = setInterval(() => {
-      this.timerTick = Date.now();
-    }, 1000);
-  },
-  beforeUnmount() {
-    clearInterval(this.ticker);
-  },
-  methods: {
-    setAllEvents(events) {
-      this.events = [...events];
+    mounted () {
+      this.ticker = setInterval(() => {
+        this.timerTick = Date.now()
+      }, 1000)
     },
-    setSelectedDate(date) {
-      this.selectedDate = new Date(date);
+    beforeUnmount () {
+      clearInterval(this.ticker)
     },
-    openEventEditor(eventId) {
-      this.$refs.dayEventsRef?.openEditEventById(eventId);
-    },
-    pauseEvent(event) {
-      if (!event?.isRunning) return event;
-      return {
-        ...event,
-        elapsedMs: (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt),
-        timerStartedAt: null,
-        isRunning: false,
-      };
-    },
-    toggleTimer(eventId) {
-      const idx = this.events.findIndex((item) => item.id === eventId);
-      if (idx === -1) return;
+    methods: {
+      setAllEvents (events) {
+        this.events = [...events]
+      },
+      setSelectedDate (date) {
+        this.selectedDate = new Date(date)
+      },
+      syncScroll (payload) {
+        this.scrollSync = {
+          ...payload,
+          stamp: Date.now(),
+        }
+      },
+      openEventEditor (eventId) {
+        this.$refs.dayEventsRef?.openEditEventById(eventId)
+      },
+      pauseEvent (event) {
+        if (!event?.isRunning) return event
+        return {
+          ...event,
+          elapsedMs: (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt),
+          timerStartedAt: null,
+          isRunning: false,
+        }
+      },
+      toggleTimer (eventId) {
+        const idx = this.events.findIndex(item => item.id === eventId)
+        if (idx === -1) return
 
-      const current = { ...this.events[idx] };
-      if (current.isCompleted) return;
+        const current = { ...this.events[idx] }
+        if (current.isCompleted) return
 
-      const updated = current.isRunning
-        ? this.pauseEvent(current)
-        : { ...current, timerStartedAt: Date.now(), isRunning: true };
+        const updated = current.isRunning
+          ? this.pauseEvent(current)
+          : { ...current, timerStartedAt: Date.now(), isRunning: true }
 
-      this.events.splice(idx, 1, updated);
+        this.events.splice(idx, 1, updated)
+      },
+      getElapsedMs (event) {
+        const elapsed = event?.elapsedMs || 0
+        if (event?.isRunning && event?.timerStartedAt) {
+          return elapsed + (this.timerTick - event.timerStartedAt)
+        }
+        return elapsed
+      },
+      formatElapsed (event) {
+        const totalSeconds = Math.max(
+          0,
+          Math.floor(this.getElapsedMs(event) / 1000),
+        )
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
+        const s = String(totalSeconds % 60).padStart(2, '0')
+        return `${h}:${m}:${s}`
+      },
     },
-    getElapsedMs(event) {
-      const elapsed = event?.elapsedMs || 0;
-      if (event?.isRunning && event?.timerStartedAt) {
-        return elapsed + (this.timerTick - event.timerStartedAt);
-      }
-      return elapsed;
-    },
-    formatElapsed(event) {
-      const totalSeconds = Math.max(
-        0,
-        Math.floor(this.getElapsedMs(event) / 1000),
-      );
-      const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-      const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-      const s = String(totalSeconds % 60).padStart(2, "0");
-      return `${h}:${m}:${s}`;
-    },
-  },
-};
+  }
 </script>
 
 <style scoped>

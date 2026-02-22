@@ -237,4 +237,15 @@
   opacity: 0;
   transform: translateY(-6px);
 }
+
+.active-timers-pop-enter-active,
+.active-timers-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.active-timers-pop-enter-from,
+.active-timers-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+}
 </style>

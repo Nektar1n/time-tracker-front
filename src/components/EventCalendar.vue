@@ -42,9 +42,12 @@
         <template #day-label="{ day, date }">
           <div class="pa-1">
             <v-btn
+              class="calendar-day-btn"
+              :class="{ 'calendar-day-btn--active': date === focus }"
               rounded="xl"
               size="small"
-              :variant="date === focus ? 'outlined' : 'text'"
+              :color="date === focus ? 'primary' : undefined"
+              :variant="date === focus ? 'flat' : 'text'"
               @click="viewDay(date)"
               @dragover.prevent
               @drop.prevent="onDropToDate(date, $event)"
@@ -55,9 +58,12 @@
         </template>
         <template #day-label-header="{ day, date }">
           <v-btn
+            class="calendar-day-btn"
+            :class="{ 'calendar-day-btn--active': date === focus }"
             rounded="xl"
             size="small"
-            :variant="date === focus ? 'outlined' : 'text'"
+            :color="date === focus ? 'primary' : undefined"
+            :variant="date === focus ? 'flat' : 'text'"
             @click="viewDay(date)"
             @dragover.prevent
             @drop.prevent="onDropToDate(date, $event)"
@@ -366,3 +372,14 @@
     },
   }
 </script>
+
+<style scoped>
+  .calendar-day-btn {
+    transition: all 0.2s ease;
+  }
+
+  .calendar-day-btn--active {
+    box-shadow: 0 0 0 2px rgb(var(--v-theme-primary));
+    font-weight: 600;
+  }
+</style>

@@ -2,22 +2,30 @@
   <v-container class="fill-height d-flex align-center" max-width="1200">
     <div class="w-100">
       <v-sheet
-        v-if="runningEvents.length > 0"
+        v-if="activeEvents.length > 0"
         class="running-timer-bar px-4 py-3 mb-4"
         color="surface"
         rounded="lg"
       >
         <div class="d-flex flex-column ga-1">
           <div class="text-subtitle-1 font-weight-bold">
-            Активные таймеры ({{ runningEvents.length }})
+            Активные таймеры ({{ activeEvents.length }})
           </div>
           <div
-            v-for="event in runningEvents"
+            v-for="event in activeEvents"
             :key="event.id"
             class="running-event-row d-flex align-center justify-space-between ga-4"
             :style="{ borderLeftColor: event.color || '#2196F3' }"
+            @click="openEventEditor(event.id)"
           >
             <div class="d-flex align-center ga-2">
+              <v-btn
+                :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
+                :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
+                size="x-small"
+                variant="text"
+                @click.stop="toggleTimer(event.id)"
+              />
               <span
                 class="running-event-dot"
                 :style="{ backgroundColor: event.color || '#2196F3' }"
@@ -54,6 +62,7 @@
         </v-col>
         <v-col cols="6">
           <day-events
+            ref="dayEventsRef"
             :events="events"
             :selected-date="selectedDate"
             @update:events="setAllEvents"
@@ -78,8 +87,10 @@ export default {
     ticker: null,
   }),
   computed: {
-    runningEvents() {
-      return this.events.filter((item) => item.isRunning);
+    activeEvents() {
+      return this.events.filter(
+        (item) => !item.isCompleted && (item.isRunning || (item.elapsedMs || 0) > 0),
+      );
     },
   },
   mounted() {
@@ -96,6 +107,31 @@ export default {
     },
     setSelectedDate(date) {
       this.selectedDate = new Date(date);
+    },
+    openEventEditor(eventId) {
+      this.$refs.dayEventsRef?.openEditEventById(eventId);
+    },
+    pauseEvent(event) {
+      if (!event?.isRunning) return event;
+      return {
+        ...event,
+        elapsedMs: (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt),
+        timerStartedAt: null,
+        isRunning: false,
+      };
+    },
+    toggleTimer(eventId) {
+      const idx = this.events.findIndex((item) => item.id === eventId);
+      if (idx === -1) return;
+
+      const current = { ...this.events[idx] };
+      if (current.isCompleted) return;
+
+      const updated = current.isRunning
+        ? this.pauseEvent(current)
+        : { ...current, timerStartedAt: Date.now(), isRunning: true };
+
+      this.events.splice(idx, 1, updated);
     },
     getElapsedMs(event) {
       const elapsed = event?.elapsedMs || 0;
@@ -133,6 +169,7 @@ export default {
   border-bottom: 0.5px solid;
   border-top: 0.5px solid;
   border-right: 0.5px solid;
+  cursor: pointer;
 }
 
 .running-event-dot {

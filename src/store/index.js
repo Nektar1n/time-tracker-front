@@ -1,7 +1,7 @@
-import { createStore } from "vuex";
+import { createStore } from 'vuex'
 
-import userStore from "@/modules/setup/setup-users/store";
-import authorizationStore from "@/modules/auth/store";
+import authorizationStore from '@/modules/auth/store'
+import userStore from '@/modules/setup/setup-users/store'
 
 // const { updateTree } = useEntityTreeDrawer();
 
@@ -9,22 +9,22 @@ const store = createStore({
   actions: {
     CLEAR_ALL_STATE: async () => {
       for (const key of Object.keys(store._modules.root._children)) {
-        const module = store._modules.root._children[key];
+        const module = store._modules.root._children[key]
         module.checkMutation = function (name) {
-          return Object.keys(module._rawModule.mutations).includes(name);
-        };
+          return Object.keys(module._rawModule.mutations).includes(name)
+        }
 
-        if (module.checkMutation("CLEAR_STORE")) {
-          module.context.commit("CLEAR_STORE");
+        if (module.checkMutation('CLEAR_STORE')) {
+          module.context.commit('CLEAR_STORE')
         }
       }
     },
   },
   modules: {
     authStore: authorizationStore,
-    userStore: userStore,
+    userStore,
   },
-});
+})
 
 // store.subscribe(async (mutation, state) => {
 //   const m = mutation.type.split("/").concat(Array(2).fill(null));
@@ -40,4 +40,4 @@ const store = createStore({
 //   }
 // });
 
-export default store;
+export default store

@@ -1,5 +1,5 @@
 <template>
-  <v-container max-width="1200" class="py-6">
+  <v-container class="py-6" max-width="1200">
     <div class="d-flex align-center justify-space-between mb-4">
       <h2>Активные таймеры</h2>
       <div class="text-medium-emphasis">Всего: {{ activeEvents.length }}</div>
@@ -7,9 +7,9 @@
 
     <v-alert
       v-if="activeEvents.length === 0"
+      text="Сейчас нет активных таймеров"
       type="info"
       variant="tonal"
-      text="Сейчас нет активных таймеров"
     />
 
     <v-row v-else>
@@ -22,7 +22,7 @@
         <v-card :border="`start ${event.color || '#2196F3'} 6`" rounded="lg">
           <v-card-title class="d-flex justify-space-between align-center ga-2">
             <span class="text-truncate">{{ event.name }}</span>
-            <span :style="{ color: event.color || '#2196F3' }" class="font-weight-bold">
+            <span class="font-weight-bold" :style="{ color: event.color || '#2196F3' }">
               {{ formatElapsed(event) }}
             </span>
           </v-card-title>

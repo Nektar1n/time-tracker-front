@@ -1,14 +1,14 @@
-import { useStore } from 'vuex'
 import { computed } from 'vue'
+import { useStore } from 'vuex'
 
-export function useUserDrawer() {
+export function useUserDrawer () {
   const store = useStore()
 
   const loading = computed({
-    get() {
+    get () {
       return store.getters['userStore/loading']
     },
-    set(v) {
+    set (v) {
       store.commit('userStore/TOGGLE_LOADING', v)
     },
   })
@@ -35,10 +35,10 @@ export function useUserDrawer() {
   ]
 
   const renderKey = computed({
-    get() {
+    get () {
       return store.getters['userStore/renderKey']
     },
-    set(v) {
+    set (v) {
       store.commit('userStore/TOGGLE_RENDER_KEY', v)
     },
   })

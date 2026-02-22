@@ -6,14 +6,14 @@
     </v-app-bar-title>
 
     <v-tabs
-      :model-value="activeTab"
       align-tabs="end"
       color="primary"
       density="comfortable"
+      :model-value="activeTab"
     >
-      <v-tab value="home" to="/">Главная</v-tab>
-      <v-tab value="active-timers" to="/active-timers">Активные таймеры</v-tab>
-      <v-tab value="statistics" to="/statistics">Статистика</v-tab>
+      <v-tab to="/" value="home">Главная</v-tab>
+      <v-tab to="/active-timers" value="active-timers">Активные таймеры</v-tab>
+      <v-tab to="/statistics" value="statistics">Статистика</v-tab>
     </v-tabs>
   </v-app-bar>
 </template>

@@ -7,7 +7,7 @@ const state = reactive({
   actionLogs: [],
 })
 
-const addActionLog = ({ eventId, eventName, action, at = Date.now() }) => {
+function addActionLog ({ eventId, eventName, action, at = Date.now() }) {
   state.actionLogs.unshift({
     id: crypto.randomUUID(),
     eventId,
@@ -17,8 +17,10 @@ const addActionLog = ({ eventId, eventName, action, at = Date.now() }) => {
   })
 }
 
-const pauseEvent = (event) => {
-  if (!event?.isRunning) return event
+function pauseEvent (event) {
+  if (!event?.isRunning) {
+    return event
+  }
 
   return {
     ...event,
@@ -28,12 +30,16 @@ const pauseEvent = (event) => {
   }
 }
 
-const toggleTimerById = (eventId) => {
+function toggleTimerById (eventId) {
   const idx = state.events.findIndex(item => item.id === eventId)
-  if (idx === -1) return
+  if (idx === -1) {
+    return
+  }
 
   const current = { ...state.events[idx] }
-  if (current.isCompleted) return
+  if (current.isCompleted) {
+    return
+  }
 
   const updated = current.isRunning
     ? pauseEvent(current)
@@ -48,9 +54,11 @@ const toggleTimerById = (eventId) => {
   })
 }
 
-const completeEventById = (eventId) => {
+function completeEventById (eventId) {
   const idx = state.events.findIndex(item => item.id === eventId)
-  if (idx === -1) return
+  if (idx === -1) {
+    return
+  }
 
   const current = { ...state.events[idx] }
   const paused = pauseEvent(current)
@@ -67,9 +75,11 @@ const completeEventById = (eventId) => {
   })
 }
 
-const updateEventById = (eventId, patch) => {
+function updateEventById (eventId, patch) {
   const idx = state.events.findIndex(item => item.id === eventId)
-  if (idx === -1) return
+  if (idx === -1) {
+    return
+  }
 
   const current = state.events[idx]
   state.events.splice(idx, 1, {
@@ -78,15 +88,15 @@ const updateEventById = (eventId, patch) => {
   })
 }
 
-const setAllEvents = (events) => {
+function setAllEvents (events) {
   state.events = [...events]
 }
 
-const setSelectedDate = (date) => {
+function setSelectedDate (date) {
   state.selectedDate = new Date(date)
 }
 
-const syncScroll = (payload) => {
+function syncScroll (payload) {
   state.scrollSync = {
     ...payload,
     stamp: Date.now(),
@@ -94,12 +104,12 @@ const syncScroll = (payload) => {
 }
 
 export {
-  state,
+  addActionLog,
+  completeEventById,
   setAllEvents,
   setSelectedDate,
+  state,
   syncScroll,
   toggleTimerById,
-  completeEventById,
   updateEventById,
-  addActionLog,
 }

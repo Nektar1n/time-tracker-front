@@ -29,7 +29,7 @@ export default {
     },
     UPDATE_USER: (state, payload) => {
       const index = state.userList.findIndex(u => u.id === payload.id)
-      if (index > -1) {
+      if (index !== -1) {
         state.userList[index] = payload
       }
     },
@@ -48,13 +48,13 @@ export default {
       state.userList = null
       state.userInfo = null
       state.resetData = null
-      //Object.keys(state).forEach(key => (state[key] = null))
+      // Object.keys(state).forEach(key => (state[key] = null))
     },
   },
   actions: {
     GENERATE_RESET_PASSWORD_TOKEN: async ({ commit }, userID) => {
       const data = await Api.post(
-        `users/${userID}/generate-reset-password-token`
+        `users/${userID}/generate-reset-password-token`,
       )
       commit('RESET_DATA', data)
     },

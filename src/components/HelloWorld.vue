@@ -2,9 +2,9 @@
   <v-container class="fill-height d-flex align-center" max-width="1200">
     <div class="w-100">
       <transition-group
+        class="running-timer-popup-list"
         name="active-timers-pop"
         tag="div"
-        class="running-timer-popup-list"
       >
         <v-sheet
           v-for="event in activeEvents"
@@ -39,11 +39,11 @@
                 @click.stop="toggleTimer(event.id)"
               />
               <v-btn
+                color="success"
                 icon="mdi-check"
                 size="x-small"
                 title="Завершить событие"
                 variant="text"
-                color="success"
                 @click.stop="completeEvent(event.id)"
               />
               <div
@@ -102,8 +102,6 @@
 </template>
 
 <script>
-  import DayEvents from './DayEvents.vue'
-  import EventCalendar from './EventCalendar.vue'
   import {
     completeEventById,
     setAllEvents,
@@ -112,6 +110,8 @@
     syncScroll,
     toggleTimerById,
   } from '@/modules/timers/timerState'
+  import DayEvents from './DayEvents.vue'
+  import EventCalendar from './EventCalendar.vue'
 
   export default {
     name: 'HelloWorld',

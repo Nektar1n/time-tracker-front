@@ -1,11 +1,11 @@
-import Modal from '@/modules/modals/Modal.class.js'
-import AuthComponent from '@/modules/auth/AuthComponent.vue'
 import { computed } from 'vue'
+import AuthComponent from '@/modules/auth/AuthComponent.vue'
+import Modal from '@/modules/modals/Modal.class.js'
 import store from '@/store'
 
-let authModal = new Modal('authModal').component(AuthComponent)
+const authModal = new Modal('authModal').component(AuthComponent)
 
-export function useAuthDrawer() {
+export function useAuthDrawer () {
   const authWindow = async () => (authModal.async = await authModal.openAsync())
 
   const login = async payload =>
@@ -30,7 +30,7 @@ export function useAuthDrawer() {
             acc = true
           }
           return acc
-        }, false)
+        }, false),
     )
 
   return {

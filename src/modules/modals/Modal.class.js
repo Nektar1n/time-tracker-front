@@ -12,82 +12,87 @@ export default class Modal {
   #ldg = ref(false)
   #async = ref(false)
 
-  constructor(title) {
+  constructor (title) {
     this.#title = title
   }
 
-  get async() {
+  get async () {
     return this.#async.value
   }
-  set async(value) {
+
+  set async (value) {
     this.#async.value = value
   }
 
-  get loading() {
+  get loading () {
     return this.#ldg.value
   }
-  set loading(value) {
+
+  set loading (value) {
     this.#ldg.value = value
   }
 
-  get getData() {
+  get getData () {
     return this.#dt
   }
 
-  get cmp() {
+  get cmp () {
     return this.#cmp
   }
 
-  get hideOverlay() {
+  get hideOverlay () {
     return this.#hO
   }
 
-  get fullscreen() {
+  get fullscreen () {
     return this.#fls
   }
 
-  get maxWidth() {
+  get maxWidth () {
     return this.#mw
   }
 
-  get title() {
+  get title () {
     return this.#tit
   }
-  set #title(title) {
+
+  set #title (title) {
     this.#tit = title
   }
 
-  get persistent() {
+  get persistent () {
     return this.#persist.value
   }
-  set #persistent(persistent) {
+
+  set #persistent (persistent) {
     this.#persist.value = persistent
   }
 
-  get state() {
+  get state () {
     return this.#st.value
   }
-  set #state(state) {
+
+  set #state (state) {
     this.#st.value = state
   }
 
-  component(c = null) {
+  component (c = null) {
     this.#cmp = c
     return this
   }
 
-  data(data) {
+  data (data) {
     this.#dt = data
     return this
   }
 
-  open(
+  open (
     o = {
       persistent: false,
       maxWidth: 600,
       fullscreen: false,
       hideOverlay: false,
-    }
+    },
   ) {
     this.#state = true
     this.#persistent = o.persistent ?? false
@@ -97,20 +102,22 @@ export default class Modal {
     return this
   }
 
-  async openAsync() {
+  async openAsync () {
     this.open({ persistent: true })
     this.loading = false
     return new Promise(resolve => {
       watch(
         () => this.async,
         f => {
-          if (f) resolve(f)
-        }
+          if (f) {
+            resolve(f)
+          }
+        },
       )
     })
   }
 
-  close() {
+  close () {
     this.#state = false
     this.#async.value = true
     return this

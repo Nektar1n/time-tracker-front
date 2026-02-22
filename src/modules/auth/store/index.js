@@ -24,7 +24,7 @@ export default {
     CLEAR_STORE: state => {
       state.authData = null
       localStorage.removeItem('authData')
-      //Object.keys(state).forEach(key => (state[key] = null))
+      // Object.keys(state).forEach(key => (state[key] = null))
     },
   },
   actions: {

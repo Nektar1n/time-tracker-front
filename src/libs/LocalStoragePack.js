@@ -1,19 +1,19 @@
 import lz from 'lz-string'
 
-function compressData(uncompressed) {
+function compressData (uncompressed) {
   return lz.compressToBase64(uncompressed)
 }
 
-function decompressData(compressed) {
+function decompressData (compressed) {
   return lz.decompressFromBase64(compressed)
 }
 
 export default class LocalStoragePack {
-  static sKey(key) {
+  static sKey (key) {
     return String(key ?? 'default')
   }
 
-  static saveSimple(key, value, compress = true) {
+  static saveSimple (key, value, compress = true) {
     const sKey = this.sKey(key)
 
     try {
@@ -29,7 +29,7 @@ export default class LocalStoragePack {
     }
   }
 
-  static loadSimple(key, defValue = '') {
+  static loadSimple (key, defValue = '') {
     const sKey = this.sKey(key)
     let value = localStorage.getItem(sKey)
 
@@ -40,7 +40,7 @@ export default class LocalStoragePack {
     return value ?? String(defValue)
   }
 
-  static saveObject(key, value, compress = true) {
+  static saveObject (key, value, compress = true) {
     const sKey = this.sKey(key)
     try {
       value = value ? JSON.stringify(value) : ''
@@ -56,7 +56,7 @@ export default class LocalStoragePack {
     }
   }
 
-  static loadObject(key, defValue = null) {
+  static loadObject (key, defValue = null) {
     const sKey = this.sKey(key)
     let value = localStorage.getItem(sKey)
 
@@ -71,7 +71,7 @@ export default class LocalStoragePack {
     }
   }
 
-  static clear(key) {
+  static clear (key) {
     localStorage.removeItem(this.sKey(key))
     return this
   }

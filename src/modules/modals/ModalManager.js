@@ -1,7 +1,7 @@
 import { reactive, shallowRef } from 'vue'
 
 export class ModalManager {
-  constructor() {
+  constructor () {
     this.modals = reactive({})
     this.currentModal = reactive({
       data: null,
@@ -10,7 +10,7 @@ export class ModalManager {
     })
   }
 
-  addModal(
+  addModal (
     key,
     options = {
       loading: false,
@@ -22,7 +22,7 @@ export class ModalManager {
       buttonOK: { title: 'ОК', action: null, show: true },
       title: null,
       props: null,
-    }
+    },
   ) {
     this.modals[key] = {
       key,
@@ -38,7 +38,7 @@ export class ModalManager {
     }
   }
 
-  open(key, data = null) {
+  open (key, data = null) {
     const modal = this.modals[key]
     this.currentModal.settings.loading = modal.loading
     this.currentModal.settings.disabled = modal.disabled
@@ -53,44 +53,48 @@ export class ModalManager {
     this.currentModal.visible = true
   }
 
-  close() {
+  close () {
     this.currentModal.visible = false
     setTimeout(() => (this.currentModal.settings = {}), 200)
   }
 
-  get props() {
+  get props () {
     return this.currentModal.settings.props
   }
   // set props(disabled) {
   //   this.currentModal.settings.disabled = disabled
   // }
 
-  get disabled() {
+  get disabled () {
     return this.currentModal.settings.disabled
   }
-  set disabled(disabled) {
+
+  set disabled (disabled) {
     this.currentModal.settings.disabled = disabled
   }
 
-  get data() {
+  get data () {
     return this.currentModal.settings.data
   }
-  set data(data) {
+
+  set data (data) {
     this.currentModal.settings.data = data
   }
 
-  get loading() {
+  get loading () {
     return this.currentModal.settings.loading
   }
-  set loading(loading) {
+
+  set loading (loading) {
     this.currentModal.settings.loading = loading
     this.currentModal.settings.persistent = loading
   }
 
-  get persistent() {
+  get persistent () {
     return this.currentModal.settings.persistent
   }
-  set persistent(persistent) {
+
+  set persistent (persistent) {
     this.currentModal.settings.persistent = persistent
   }
 }

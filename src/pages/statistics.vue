@@ -1,10 +1,10 @@
 <template>
-  <v-container max-width="1400" class="py-6">
+  <v-container class="py-6" max-width="1400">
     <v-row>
       <v-col cols="12" md="6">
-        <v-card rounded="lg" class="pa-4 h-100">
+        <v-card class="pa-4 h-100" rounded="lg">
           <div class="text-h6 mb-3">История действий</div>
-          <v-list lines="two" max-height="70vh" class="overflow-y-auto">
+          <v-list class="overflow-y-auto" lines="two" max-height="70vh">
             <v-list-item
               v-for="entry in actionLogs"
               :key="entry.id"
@@ -20,18 +20,18 @@
       </v-col>
 
       <v-col cols="12" md="6">
-        <v-card rounded="lg" class="pa-4 mb-4">
+        <v-card class="pa-4 mb-4" rounded="lg">
           <div class="text-h6 mb-4">Статистика действий</div>
-          <div class="mb-4" v-for="item in actionStats" :key="item.key">
+          <div v-for="item in actionStats" :key="item.key" class="mb-4">
             <div class="d-flex justify-space-between mb-1">
               <span>{{ item.label }}</span>
               <strong>{{ item.value }}</strong>
             </div>
-            <v-progress-linear :model-value="item.percent" color="primary" height="12" rounded />
+            <v-progress-linear color="primary" height="12" :model-value="item.percent" rounded />
           </div>
         </v-card>
 
-        <v-card rounded="lg" class="pa-4">
+        <v-card class="pa-4" rounded="lg">
           <div class="text-h6 mb-4">Время работы</div>
           <div class="d-flex justify-space-between align-center mb-2">
             <span>Суммарно отработано</span>

@@ -3,7 +3,7 @@
     <v-row dense>
       <v-col cols="12">
         <v-card prepend-icon="mdi-cog">
-          <template v-slot:title>
+          <template #title>
             <span class="text-h6 font-weight-black">Настройки программы</span>
           </template>
         </v-card>

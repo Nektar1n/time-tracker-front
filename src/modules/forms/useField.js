@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue'
 import { ErrorMessages } from './validationRules.js'
 
-export function useField(field) {
+export function useField (field) {
   const valid = ref(true)
   const value = ref(field.value)
   const error = ref([])
@@ -14,15 +14,16 @@ export function useField(field) {
 
       if (!isValid) {
         valid.value = false
-        if (touch)
+        if (touch) {
           error.value.push(ErrorMessages[name] ?? 'неопределенная ошибка')
+        }
       }
     })
   }
 
   watch(
     () => value.value,
-    f => revalidate(f, true)
+    f => revalidate(f, true),
   )
 
   revalidate(value.value)

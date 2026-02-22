@@ -2,17 +2,17 @@
   <v-row class="fill-height">
     <v-col>
       <v-sheet height="64">
-        <v-toolbar flat class="d-flex text-right">
+        <v-toolbar class="d-flex text-right" flat>
           <v-btn
-            @click="type = 'month'"
-            :disabled="type === 'month'"
             color="grey-darken-2"
-            variant="text"
+            :disabled="type === 'month'"
             icon
+            variant="text"
+            @click="type = 'month'"
           >
             <v-icon> mdi-calendar-month </v-icon>
           </v-btn>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
             class="me-4"
             color="grey-darken-2"
@@ -23,18 +23,18 @@
           </v-btn>
           <v-btn
             color="grey-darken-2"
+            icon
             size="small"
             variant="text"
-            icon
             @click="prev"
           >
             <v-icon size="small"> mdi-chevron-left </v-icon>
           </v-btn>
           <v-btn
             color="grey-darken-2"
+            icon
             size="small"
             variant="text"
-            icon
             @click="next"
           >
             <v-icon size="small"> mdi-chevron-right </v-icon>
@@ -43,7 +43,7 @@
             {{ calendar.title }}
           </v-toolbar-title>
           <v-menu location="bottom end">
-            <template v-slot:activator="{ props }">
+            <template #activator="{ props }">
               <v-btn color="grey-darken-2" variant="outlined" v-bind="props">
                 <span>{{ typeToLabel[type] }}</span>
                 <v-icon end> mdi-menu-down </v-icon>
@@ -70,27 +70,27 @@
         <v-calendar
           ref="calendar"
           v-model="focus"
+          color="primary"
           :event-color="getEventColor"
           :events="events"
           :type="type"
-          color="primary"
           @change="updateRange"
           @click:date="viewDay"
           @click:event="showEvent"
           @click:more="viewDay"
-        ></v-calendar>
+        />
         <v-menu
           v-model="selectedOpen"
           :activator="selectedElement"
           :close-on-content-click="false"
           location="end"
         >
-          <v-card color="grey-lighten-4" min-width="350px" flat>
+          <v-card color="grey-lighten-4" flat min-width="350px">
             <v-toolbar :color="selectedEvent.color" dark>
               <v-btn icon>
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>
-              <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
+              <v-toolbar-title v-html="selectedEvent.name" />
               <v-btn icon>
                 <v-icon>mdi-heart</v-icon>
               </v-btn>
@@ -99,7 +99,7 @@
               </v-btn>
             </v-toolbar>
             <v-card-text>
-              <span v-html="selectedEvent.details"></span>
+              <span v-html="selectedEvent.details" />
             </v-card-text>
             <v-card-actions>
               <v-btn
@@ -118,108 +118,108 @@
 </template>
 
 <script>
-export default {
-  name: "MainCalendar",
-  data: () => ({
-    focus: "",
-    type: "month",
-    typeToLabel: {
-      month: "Month",
-      week: "Week",
-      day: "Day",
-      "4day": "4 Days",
+  export default {
+    name: 'MainCalendar',
+    data: () => ({
+      focus: '',
+      type: 'month',
+      typeToLabel: {
+        'month': 'Month',
+        'week': 'Week',
+        'day': 'Day',
+        '4day': '4 Days',
+      },
+      selectedEvent: {},
+      selectedElement: null,
+      selectedOpen: false,
+      events: [],
+      colors: [
+        'blue',
+        'indigo',
+        'deep-purple',
+        'cyan',
+        'green',
+        'orange',
+        'grey darken-1',
+      ],
+      names: [
+        'Meeting',
+        'Holiday',
+        'PTO',
+        'Travel',
+        'Event',
+        'Birthday',
+        'Conference',
+        'Party',
+      ],
+    }),
+    mounted () {
+      this.$refs.calendar.checkChange()
     },
-    selectedEvent: {},
-    selectedElement: null,
-    selectedOpen: false,
-    events: [],
-    colors: [
-      "blue",
-      "indigo",
-      "deep-purple",
-      "cyan",
-      "green",
-      "orange",
-      "grey darken-1",
-    ],
-    names: [
-      "Meeting",
-      "Holiday",
-      "PTO",
-      "Travel",
-      "Event",
-      "Birthday",
-      "Conference",
-      "Party",
-    ],
-  }),
-  mounted() {
-    this.$refs.calendar.checkChange();
-  },
-  methods: {
-    viewDay(nativeEvent, { date }) {
-      this.focus = date;
-      this.type = "day";
-    },
-    getEventColor(event) {
-      return event.color;
-    },
-    setToday() {
-      this.focus = "";
-    },
-    prev() {
-      this.$refs.calendar.prev();
-    },
-    next() {
-      this.$refs.calendar.next();
-    },
-    showEvent(nativeEvent, { event }) {
-      const open = () => {
-        this.selectedEvent = event;
-        this.selectedElement = nativeEvent.target;
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => (this.selectedOpen = true)),
-        );
-      };
+    methods: {
+      viewDay (nativeEvent, { date }) {
+        this.focus = date
+        this.type = 'day'
+      },
+      getEventColor (event) {
+        return event.color
+      },
+      setToday () {
+        this.focus = ''
+      },
+      prev () {
+        this.$refs.calendar.prev()
+      },
+      next () {
+        this.$refs.calendar.next()
+      },
+      showEvent (nativeEvent, { event }) {
+        const open = () => {
+          this.selectedEvent = event
+          this.selectedElement = nativeEvent.target
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => (this.selectedOpen = true)),
+          )
+        }
 
-      if (this.selectedOpen) {
-        this.selectedOpen = false;
-        requestAnimationFrame(() => requestAnimationFrame(() => open()));
-      } else {
-        open();
-      }
+        if (this.selectedOpen) {
+          this.selectedOpen = false
+          requestAnimationFrame(() => requestAnimationFrame(() => open()))
+        } else {
+          open()
+        }
 
-      nativeEvent.stopPropagation();
+        nativeEvent.stopPropagation()
+      },
+      updateRange ({ start, end }) {
+        const events = []
+
+        const min = new Date(`${start.date}T00:00:00`)
+        const max = new Date(`${end.date}T23:59:59`)
+        const days = (max.getTime() - min.getTime()) / 86_400_000
+        const eventCount = this.rnd(days, days + 20)
+
+        for (let i = 0; i < eventCount; i++) {
+          const allDay = this.rnd(0, 3) === 0
+          const firstTimestamp = this.rnd(min.getTime(), max.getTime())
+          const first = new Date(firstTimestamp - (firstTimestamp % 900_000))
+          const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900_000
+          const second = new Date(first.getTime() + secondTimestamp)
+
+          events.push({
+            name: this.names[this.rnd(0, this.names.length - 1)],
+            start: first,
+            end: second,
+            color: this.colors[this.rnd(0, this.colors.length - 1)],
+            timed: !allDay,
+          })
+        }
+
+        this.events = events
+      },
+      rnd (a, b) {
+        return Math.floor((b - a + 1) * Math.random()) + a
+      },
     },
-    updateRange({ start, end }) {
-      const events = [];
-
-      const min = new Date(`${start.date}T00:00:00`);
-      const max = new Date(`${end.date}T23:59:59`);
-      const days = (max.getTime() - min.getTime()) / 86400000;
-      const eventCount = this.rnd(days, days + 20);
-
-      for (let i = 0; i < eventCount; i++) {
-        const allDay = this.rnd(0, 3) === 0;
-        const firstTimestamp = this.rnd(min.getTime(), max.getTime());
-        const first = new Date(firstTimestamp - (firstTimestamp % 900000));
-        const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900000;
-        const second = new Date(first.getTime() + secondTimestamp);
-
-        events.push({
-          name: this.names[this.rnd(0, this.names.length - 1)],
-          start: first,
-          end: second,
-          color: this.colors[this.rnd(0, this.colors.length - 1)],
-          timed: !allDay,
-        });
-      }
-
-      this.events = events;
-    },
-    rnd(a, b) {
-      return Math.floor((b - a + 1) * Math.random()) + a;
-    },
-  },
-};
+  }
 </script>

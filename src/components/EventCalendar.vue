@@ -45,9 +45,9 @@
             <v-btn
               class="calendar-day-btn"
               :class="{ 'calendar-day-btn--active': isActiveDate(date) }"
+              :color="isActiveDate(date) ? 'primary' : undefined"
               rounded="xl"
               size="small"
-              :color="isActiveDate(date) ? 'primary' : undefined"
               :variant="isActiveDate(date) ? 'flat' : 'text'"
               @click="viewDay(date)"
               @dragover.prevent
@@ -61,9 +61,9 @@
           <v-btn
             class="calendar-day-btn"
             :class="{ 'calendar-day-btn--active': isActiveDate(date) }"
+            :color="isActiveDate(date) ? 'primary' : undefined"
             rounded="xl"
             size="small"
-            :color="isActiveDate(date) ? 'primary' : undefined"
             :variant="isActiveDate(date) ? 'flat' : 'text'"
             @click="viewDay(date)"
             @dragover.prevent

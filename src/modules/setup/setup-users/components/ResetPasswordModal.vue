@@ -5,20 +5,20 @@
         <div v-html="data.text" />
         <div v-html="data.sub" />
         <v-alert
+          v-if="data.link"
+          border="start"
+          class="mt-2"
           color="info"
           density="compact"
-          border="start"
           variant="tonal"
-          class="mt-2"
-          v-if="data.link"
         >
           {{ data.link }}
-          <template v-slot:append>
+          <template #append>
             <v-btn
               v-copy="`${data.link}`"
+              icon="mdi-content-copy"
               title="Копировать"
               variant="text"
-              icon="mdi-content-copy"
             />
           </template>
         </v-alert>
@@ -28,43 +28,43 @@
 </template>
 
 <script setup>
-import { inject, onMounted, reactive } from 'vue'
-import { useUserDrawer } from '@/modules/setup/setup-users/hook/useUserDrawer.js'
-import { useToast } from 'vue-toastification'
+  import { inject, onMounted, reactive } from 'vue'
+  import { useToast } from 'vue-toastification'
+  import { useUserDrawer } from '@/modules/setup/setup-users/hook/useUserDrawer.js'
 
-const modal = inject('modal')
+  const modal = inject('modal')
 
-const props = defineProps({ user: {} })
-const toast = useToast()
+  const props = defineProps({ user: {} })
+  const toast = useToast()
 
-const { newPasswordRequest, resetData } = useUserDrawer()
+  const { newPasswordRequest, resetData } = useUserDrawer()
 
-const data = reactive({
-  text: '',
-  sub: '',
-  link: '',
-})
+  const data = reactive({
+    text: '',
+    sub: '',
+    link: '',
+  })
 
-const sendRequest = async () => {
-  try {
-    modal.loading = true
-    await newPasswordRequest(props.user.id)
-    data.text = 'Письмо успешно отправлено'
-    data.sub = `Если пользователю с электронной почтой: <span class="font-weight-bold">${props.user.email}</span> не пришла ссылка для установки нового пароля, можете прислать её вручную:`
-    data.link = `${window.location.origin}/reset-password/${resetData.value?.token_reset_password}`
-    modal.disabled = true
-  } catch (e) {
-    toast.error(e.message || e)
-  } finally {
-    modal.loading = false
+  async function sendRequest () {
+    try {
+      modal.loading = true
+      await newPasswordRequest(props.user.id)
+      data.text = 'Письмо успешно отправлено'
+      data.sub = `Если пользователю с электронной почтой: <span class="font-weight-bold">${props.user.email}</span> не пришла ссылка для установки нового пароля, можете прислать её вручную:`
+      data.link = `${window.location.origin}/reset-password/${resetData.value?.token_reset_password}`
+      modal.disabled = true
+    } catch (error) {
+      toast.error(error.message || error)
+    } finally {
+      modal.loading = false
+    }
   }
-}
 
-onMounted(() => {
-  data.text = `На электронный адрес <span class="font-weight-bold">${props.user.email}</span> пользователя <span class="font-weight-bold">${props.user.name}</span> будет отправлено письмо с инструкцией для установки нового пароля`
-})
+  onMounted(() => {
+    data.text = `На электронный адрес <span class="font-weight-bold">${props.user.email}</span> пользователя <span class="font-weight-bold">${props.user.name}</span> будет отправлено письмо с инструкцией для установки нового пароля`
+  })
 
-defineExpose({ sendRequest })
+  defineExpose({ sendRequest })
 </script>
 
 <style scoped></style>

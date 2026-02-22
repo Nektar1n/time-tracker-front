@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 
 const drawer = ref(true)
 
-export function useNavigation() {
+export function useNavigation () {
   const router = useRouter()
 
   const pow = list =>

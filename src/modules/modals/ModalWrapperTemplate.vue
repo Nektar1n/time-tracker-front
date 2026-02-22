@@ -1,34 +1,34 @@
 <script setup>
-import { computed, inject, ref } from 'vue'
+  import { computed, inject, ref } from 'vue'
 
-const modal = inject('modal')
+  const modal = inject('modal')
 
-const componentRef = ref(null)
+  const componentRef = ref(null)
 
-const _clickOK = () => {
-  const fnToCall =
-    typeof modal.currentModal.settings?.buttonOK?.action === 'function'
-      ? modal.currentModal.settings.buttonOK.action
-      : typeof componentRef.value?.action === 'function'
-        ? componentRef.value.action
-        : typeof modal.currentModal.settings?.buttonOK?.action === 'string'
-          ? componentRef.value[modal.currentModal.settings.buttonOK.action]
-          : undefined
+  function _clickOK () {
+    const fnToCall
+      = typeof modal.currentModal.settings?.buttonOK?.action === 'function'
+        ? modal.currentModal.settings.buttonOK.action
+        : typeof componentRef.value?.action === 'function'
+          ? componentRef.value.action
+          : typeof modal.currentModal.settings?.buttonOK?.action === 'string'
+            ? componentRef.value[modal.currentModal.settings.buttonOK.action]
+            : undefined
 
-  if (typeof fnToCall === 'function') {
-    fnToCall()
+    if (typeof fnToCall === 'function') {
+      fnToCall()
+    }
   }
-}
 
-const showOK = computed(() => modal.currentModal.settings.buttonOK.show ?? true)
+  const showOK = computed(() => modal.currentModal.settings.buttonOK.show ?? true)
 </script>
 
 <template>
   <v-dialog
     v-model="modal.currentModal.visible"
-    :persistent="modal.persistent"
-    :max-width="modal.currentModal.settings.maxWidth"
     :fullscreen="modal.currentModal.settings.fullScreen"
+    :max-width="modal.currentModal.settings.maxWidth"
+    :persistent="modal.persistent"
   >
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center">
@@ -37,11 +37,11 @@ const showOK = computed(() => modal.currentModal.settings.buttonOK.show ?? true)
         </div>
 
         <v-btn
+          :disabled="modal.loading"
           icon="mdi-close"
           variant="text"
-          :disabled="modal.loading"
           @click="modal.close()"
-        ></v-btn>
+        />
       </v-card-title>
       <v-card-text>
         <component
@@ -53,14 +53,14 @@ const showOK = computed(() => modal.currentModal.settings.buttonOK.show ?? true)
       <v-card-actions>
         <v-spacer />
         <v-btn
-          @click="_clickOK()"
-          :loading="modal.loading"
-          :disabled="modal.currentModal.settings.disabled"
           v-if="showOK"
+          :disabled="modal.currentModal.settings.disabled"
+          :loading="modal.loading"
+          @click="_clickOK()"
         >
           {{ modal.currentModal.settings.buttonOK?.title || 'OK' }}
         </v-btn>
-        <v-btn @click="modal.close()" :disabled="modal.loading">Закрыть</v-btn>
+        <v-btn :disabled="modal.loading" @click="modal.close()">Закрыть</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

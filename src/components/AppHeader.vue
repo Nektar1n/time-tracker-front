@@ -4,12 +4,30 @@
       <v-icon color="primary" icon="mdi-timer-sand" />
       <span>Time Tracker</span>
     </v-app-bar-title>
+
+    <v-tabs
+      :model-value="activeTab"
+      align-tabs="end"
+      color="primary"
+      density="comfortable"
+    >
+      <v-tab value="home" to="/">Главная</v-tab>
+      <v-tab value="active-timers" to="/active-timers">Активные таймеры</v-tab>
+      <v-tab value="statistics" to="/statistics">Статистика</v-tab>
+    </v-tabs>
   </v-app-bar>
 </template>
 
 <script>
   export default {
     name: 'AppHeader',
+    computed: {
+      activeTab () {
+        if (this.$route.path === '/active-timers') return 'active-timers'
+        if (this.$route.path === '/statistics') return 'statistics'
+        return 'home'
+      },
+    },
   }
 </script>
 

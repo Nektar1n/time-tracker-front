@@ -91,6 +91,8 @@
 </template>
 
 <script>
+  import { addActionLog } from '@/modules/timers/timerState'
+
   export default {
     name: 'DayEvents',
     props: {
@@ -282,6 +284,12 @@
 
         this.localEvents.splice(idx, 1, current)
         this.emitEvents()
+
+        addActionLog({
+          eventId: current.id,
+          eventName: current.name,
+          action: current.isRunning ? 'start' : 'pause',
+        })
       },
       completeTask (event) {
         const idx = this.localEvents.findIndex(item => item.id === event.id)
@@ -291,10 +299,21 @@
         current.isCompleted = !current.isCompleted
         if (current.isCompleted) {
           this.pauseEvent(current)
+          addActionLog({
+            eventId: current.id,
+            eventName: current.name,
+            action: 'complete',
+          })
         }
 
         this.localEvents.splice(idx, 1, current)
         this.emitEvents()
+
+        addActionLog({
+          eventId: current.id,
+          eventName: current.name,
+          action: current.isRunning ? 'start' : 'pause',
+        })
       },
       onDraftCompletionChange (value) {
         if (!value) return

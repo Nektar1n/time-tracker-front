@@ -8,7 +8,9 @@
         rounded="lg"
       >
         <div class="d-flex flex-column ga-1">
-          <div class="text-subtitle-1 font-weight-bold">Активные таймеры ({{ runningEvents.length }})</div>
+          <div class="text-subtitle-1 font-weight-bold">
+            Активные таймеры ({{ runningEvents.length }})
+          </div>
           <div
             v-for="event in runningEvents"
             :key="event.id"
@@ -22,7 +24,12 @@
               />
               <span>{{ event.name }}</span>
             </div>
-            <div class="running-timer-value" :style="{ color: event.color || '#2196F3' }">{{ formatElapsed(event) }}</div>
+            <div
+              class="running-timer-value"
+              :style="{ color: event.color || '#2196F3' }"
+            >
+              {{ formatElapsed(event) }}
+            </div>
           </div>
         </div>
       </v-sheet>
@@ -58,54 +65,57 @@
 </template>
 
 <script>
-  import DayEvents from './DayEvents.vue'
-  import EventCalendar from './EventCalendar.vue'
+import DayEvents from "./DayEvents.vue";
+import EventCalendar from "./EventCalendar.vue";
 
-  export default {
-    name: 'HelloWorld',
-    components: { DayEvents, EventCalendar },
-    data: () => ({
-      events: [],
-      selectedDate: new Date(),
-      timerTick: Date.now(),
-      ticker: null,
-    }),
-    computed: {
-      runningEvents () {
-        return this.events.filter(item => item.isRunning)
-      },
+export default {
+  name: "HelloWorld",
+  components: { DayEvents, EventCalendar },
+  data: () => ({
+    events: [],
+    selectedDate: new Date(),
+    timerTick: Date.now(),
+    ticker: null,
+  }),
+  computed: {
+    runningEvents() {
+      return this.events.filter((item) => item.isRunning);
     },
-    mounted () {
-      this.ticker = setInterval(() => {
-        this.timerTick = Date.now()
-      }, 1000)
+  },
+  mounted() {
+    this.ticker = setInterval(() => {
+      this.timerTick = Date.now();
+    }, 1000);
+  },
+  beforeUnmount() {
+    clearInterval(this.ticker);
+  },
+  methods: {
+    setAllEvents(events) {
+      this.events = [...events];
     },
-    beforeUnmount () {
-      clearInterval(this.ticker)
+    setSelectedDate(date) {
+      this.selectedDate = new Date(date);
     },
-    methods: {
-      setAllEvents (events) {
-        this.events = [...events]
-      },
-      setSelectedDate (date) {
-        this.selectedDate = new Date(date)
-      },
-      getElapsedMs (event) {
-        const elapsed = event?.elapsedMs || 0
-        if (event?.isRunning && event?.timerStartedAt) {
-          return elapsed + (this.timerTick - event.timerStartedAt)
-        }
-        return elapsed
-      },
-      formatElapsed (event) {
-        const totalSeconds = Math.max(0, Math.floor(this.getElapsedMs(event) / 1000))
-        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
-        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
-        const s = String(totalSeconds % 60).padStart(2, '0')
-        return `${h}:${m}:${s}`
-      },
+    getElapsedMs(event) {
+      const elapsed = event?.elapsedMs || 0;
+      if (event?.isRunning && event?.timerStartedAt) {
+        return elapsed + (this.timerTick - event.timerStartedAt);
+      }
+      return elapsed;
     },
-  }
+    formatElapsed(event) {
+      const totalSeconds = Math.max(
+        0,
+        Math.floor(this.getElapsedMs(event) / 1000),
+      );
+      const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+      const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+      const s = String(totalSeconds % 60).padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -120,7 +130,9 @@
   border-left: 4px solid;
   border-radius: 8px;
   padding: 6px 10px;
-  background: rgb(var(--v-theme-surface-variant));
+  border-bottom: 0.5px solid;
+  border-top: 0.5px solid;
+  border-right: 0.5px solid;
 }
 
 .running-event-dot {

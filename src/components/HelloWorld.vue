@@ -1,6 +1,16 @@
 <template>
   <v-container class="fill-height d-flex align-center" max-width="1200">
-    <div>
+    <div class="w-100">
+      <v-sheet
+        v-if="runningEvent"
+        class="running-timer-bar px-4 py-3 mb-4 d-flex align-center justify-space-between"
+        color="primary"
+        rounded="lg"
+      >
+        <div class="text-subtitle-1 font-weight-bold">{{ runningEvent.name }}</div>
+        <div class="running-timer-value">{{ formatElapsed(runningEvent) }}</div>
+      </v-sheet>
+
       <v-row>
         <v-col cols="6">
           <v-card
@@ -41,7 +51,22 @@
     data: () => ({
       events: [],
       selectedDate: new Date(),
+      timerTick: Date.now(),
+      ticker: null,
     }),
+    computed: {
+      runningEvent () {
+        return this.events.find(item => item.isRunning)
+      },
+    },
+    mounted () {
+      this.ticker = setInterval(() => {
+        this.timerTick = Date.now()
+      }, 1000)
+    },
+    beforeUnmount () {
+      clearInterval(this.ticker)
+    },
     methods: {
       setAllEvents (events) {
         this.events = [...events]
@@ -49,6 +74,36 @@
       setSelectedDate (date) {
         this.selectedDate = new Date(date)
       },
+      getElapsedMs (event) {
+        const elapsed = event?.elapsedMs || 0
+        if (event?.isRunning && event?.timerStartedAt) {
+          return elapsed + (this.timerTick - event.timerStartedAt)
+        }
+        return elapsed
+      },
+      formatElapsed (event) {
+        const totalSeconds = Math.max(0, Math.floor(this.getElapsedMs(event) / 1000))
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
+        const s = String(totalSeconds % 60).padStart(2, '0')
+        return `${h}:${m}:${s}`
+      },
     },
   }
 </script>
+
+<style scoped>
+.running-timer-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  color: white;
+}
+
+.running-timer-value {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+</style>

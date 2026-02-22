@@ -16,11 +16,7 @@
         @mouseup:time="endDrag"
       >
         <template #event="{ event, timed, eventSummary }">
-          <div
-            class="v-event-draggable d-flex align-center ga-1"
-            draggable="true"
-            @dragstart="startExternalDrag(event, $event)"
-          >
+          <div class="v-event-draggable d-flex align-center ga-1">
             <v-btn
               icon
               size="x-small"
@@ -29,8 +25,19 @@
             >
               <v-icon size="14">{{ event.isRunning ? 'mdi-pause' : 'mdi-play' }}</v-icon>
             </v-btn>
+            <v-btn
+              draggable="true"
+              icon
+              size="x-small"
+              title="Перенести в левый календарь"
+              variant="text"
+              @dragstart.stop="startExternalDrag(event, $event)"
+              @mousedown.stop
+            >
+              <v-icon size="14">mdi-drag</v-icon>
+            </v-btn>
             <component :is="eventSummary" />
-            <small>{{ formatElapsed(event) }}</small>
+            <small class="event-timer">{{ formatElapsed(event) }}</small>
           </div>
           <div
             v-if="timed"
@@ -239,6 +246,7 @@
         this.createEvent = null
         this.createStart = null
         this.extendOriginal = null
+        this.emitEvents()
       },
       cancelDrag () {
         if (this.createEvent) {
@@ -286,6 +294,12 @@
 .v-event-timed {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.event-timer {
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: auto;
 }
 
 .v-event-drag-bottom {

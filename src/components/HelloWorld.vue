@@ -2,13 +2,22 @@
   <v-container class="fill-height d-flex align-center" max-width="1200">
     <div class="w-100">
       <v-sheet
-        v-if="runningEvent"
+        v-if="runningEvents.length > 0"
         class="running-timer-bar px-4 py-3 mb-4 d-flex align-center justify-space-between"
         color="primary"
         rounded="lg"
       >
-        <div class="text-subtitle-1 font-weight-bold">{{ runningEvent.name }}</div>
-        <div class="running-timer-value">{{ formatElapsed(runningEvent) }}</div>
+        <div class="d-flex flex-column ga-1">
+          <div class="text-subtitle-1 font-weight-bold">Активные таймеры ({{ runningEvents.length }})</div>
+          <div
+            v-for="event in runningEvents"
+            :key="event.id"
+            class="d-flex align-center justify-space-between ga-4"
+          >
+            <div>{{ event.name }}</div>
+            <div class="running-timer-value">{{ formatElapsed(event) }}</div>
+          </div>
+        </div>
       </v-sheet>
 
       <v-row>
@@ -55,8 +64,8 @@
       ticker: null,
     }),
     computed: {
-      runningEvent () {
-        return this.events.find(item => item.isRunning)
+      runningEvents () {
+        return this.events.filter(item => item.isRunning)
       },
     },
     mounted () {
@@ -101,7 +110,7 @@
 }
 
 .running-timer-value {
-  font-size: 34px;
+  font-size: 20px;
   line-height: 1;
   font-weight: 800;
   letter-spacing: 1px;

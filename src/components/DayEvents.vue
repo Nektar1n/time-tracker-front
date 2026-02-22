@@ -158,6 +158,13 @@
       clearInterval(this.ticker)
     },
     methods: {
+      openEditEventById (eventId) {
+        const event = this.localEvents.find(item => item.id === eventId)
+        if (!event) return
+
+        this.draftEvent = { ...event, isCompleted: Boolean(event.isCompleted) }
+        this.isEditOpen = true
+      },
       emitEvents () {
         this.$emit('update:events', this.localEvents.map(item => ({ ...item })))
       },

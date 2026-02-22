@@ -3,8 +3,8 @@
     <div class="w-100">
       <v-sheet
         v-if="runningEvents.length > 0"
-        class="running-timer-bar px-4 py-3 mb-4 d-flex align-center justify-space-between"
-        color="primary"
+        class="running-timer-bar px-4 py-3 mb-4"
+        color="surface"
         rounded="lg"
       >
         <div class="d-flex flex-column ga-1">
@@ -12,10 +12,17 @@
           <div
             v-for="event in runningEvents"
             :key="event.id"
-            class="d-flex align-center justify-space-between ga-4"
+            class="running-event-row d-flex align-center justify-space-between ga-4"
+            :style="{ borderLeftColor: event.color || '#2196F3' }"
           >
-            <div>{{ event.name }}</div>
-            <div class="running-timer-value">{{ formatElapsed(event) }}</div>
+            <div class="d-flex align-center ga-2">
+              <span
+                class="running-event-dot"
+                :style="{ backgroundColor: event.color || '#2196F3' }"
+              />
+              <span>{{ event.name }}</span>
+            </div>
+            <div class="running-timer-value" :style="{ color: event.color || '#2196F3' }">{{ formatElapsed(event) }}</div>
           </div>
         </div>
       </v-sheet>
@@ -106,7 +113,20 @@
   position: sticky;
   top: 8px;
   z-index: 20;
-  color: white;
+  border: 1px solid rgb(var(--v-theme-surface-variant));
+}
+
+.running-event-row {
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: rgb(var(--v-theme-surface-variant));
+}
+
+.running-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .running-timer-value {

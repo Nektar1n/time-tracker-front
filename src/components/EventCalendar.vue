@@ -137,6 +137,10 @@
         immediate: true,
         deep: true,
         handler (value) {
+          if (this.dragEvent || this.createEvent) {
+            return
+          }
+
           this.localEvents = value.map(item => ({ ...item }))
         },
       },

@@ -1,5 +1,5 @@
 //import lsp from '@/lib/LocalStoragePack'
-import Api from "@/lib/apiCall";
+import Api from "@/libs/apiCall";
 import Vue from "vue";
 
 const state = {

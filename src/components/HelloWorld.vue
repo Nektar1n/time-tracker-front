@@ -1,137 +1,204 @@
 <template>
-  <v-container class="fill-height d-flex align-center" max-width="1200">
-    <div>
-      <!-- <v-row justify="center">
-        <v-col cols="12">
-          <v-card
-            class="py-4"
-            color="surface-variant"
-            image="https://cdn.vuetifyjs.com/docs/images/one/create/feature.png"
-            prepend-icon="mdi-rocket-launch-outline"
-            rounded="lg"
-            variant="tonal"
-          >
-            <v-date-picker
-              header-date-format="monthAndDate"
-              landscape
-              show-adjacent-months
-            /> </v-card
-        ></v-col>
-      </v-row> -->
-      <!-- <v-row>
-        <v-col cols="12">
-          <main-calendar />
-        </v-col>
-      </v-row> -->
-      <v-row>
-        <v-col cols="6">
-          <v-card
-            class="py-4"
-            color="surface-variant"
-            image="https://cdn.vuetifyjs.com/docs/images/one/create/feature.png"
-            prepend-icon="mdi-calendar"
-            rounded="lg"
-            variant="tonal"
-          >
-            <event-calendar @change="setEvents" /> </v-card
-        ></v-col>
-        <v-col cols="6"> <day-events :value="events" /></v-col>
-      </v-row>
+  <v-container class="py-6" max-width="1200">
+    <v-row>
+      <v-col cols="12" md="6">
+        <v-card
+          class="py-4"
+          color="surface-variant"
+          image="https://cdn.vuetifyjs.com/docs/images/one/create/feature.png"
+          prepend-icon="mdi-calendar"
+          rounded="lg"
+          variant="tonal"
+        >
+          <event-calendar @change="setEvents" />
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="6">
+        <day-events :value="events" />
+      </v-col>
+    </v-row>
 
-      <v-row>
-        <!-- <v-col cols="12">
-          <v-card
-            class="py-4"
-            color="surface-variant"
-            image="https://cdn.vuetifyjs.com/docs/images/one/create/feature.png"
-            prepend-icon="mdi-rocket-launch-outline"
-            rounded="lg"
-            variant="tonal"
-          >
-            <template #image>
-              <v-img position="top right" />
-            </template>
+    <v-row class="mt-4">
+      <v-col cols="12">
+        <v-card class="pa-6" rounded="lg" variant="tonal">
+          <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+              <h2 class="text-h5">Тайм-трекер задач</h2>
+              <p class="text-medium-emphasis">Редактируйте описание и запускайте таймер для каждой задачи.</p>
+            </div>
+            <v-btn color="primary" prepend-icon="mdi-plus" @click="addTask">
+              Добавить задачу
+            </v-btn>
+          </div>
 
-            <template #title>
-              <h2 class="text-h5 font-weight-bold">Get started</h2>
-            </template>
+          <v-row v-if="tasks.length" class="ga-4">
+            <v-col v-for="task in tasks" :key="task.id" cols="12" md="6">
+              <v-card class="pa-4 h-100" border>
+                <div class="d-flex justify-space-between align-start mb-2">
+                  <v-text-field
+                    v-model="task.title"
+                    density="compact"
+                    hide-details
+                    label="Название задачи"
+                    variant="outlined"
+                  />
+                  <v-btn
+                    class="ml-2"
+                    color="error"
+                    icon="mdi-delete"
+                    variant="text"
+                    @click="removeTask(task.id)"
+                  />
+                </div>
 
-            <template #subtitle>
-              <div class="text-subtitle-1">
-                Change this page by updating
-                <v-kbd>{{ `<HelloWorld />` }}</v-kbd> in
-                <v-kbd>components/HelloWorld.vue</v-kbd>.
-              </div>
-            </template>
-          </v-card>
-        </v-col> -->
+                <v-textarea
+                  v-model="task.description"
+                  auto-grow
+                  class="mb-4"
+                  label="Описание задачи"
+                  rows="3"
+                  variant="outlined"
+                />
 
-        <v-col v-for="link in links" :key="link.href" cols="6">
-          <v-card
-            append-icon="mdi-open-in-new"
-            class="py-4"
-            color="surface-variant"
-            :href="link.href"
-            :prepend-icon="link.icon"
-            rel="noopener noreferrer"
-            rounded="lg"
-            :subtitle="link.subtitle"
-            target="_blank"
-            :title="link.title"
-            variant="tonal"
-          />
-        </v-col>
-      </v-row>
-    </div>
+                <div class="timer-box text-center py-6 mb-4">
+                  {{ formatDuration(getTaskDuration(task)) }}
+                </div>
+
+                <div class="d-flex justify-center ga-2">
+                  <v-btn
+                    :color="task.isRunning ? 'warning' : 'success'"
+                    :prepend-icon="task.isRunning ? 'mdi-pause' : 'mdi-play'"
+                    @click="toggleTimer(task.id)"
+                  >
+                    {{ task.isRunning ? "Пауза" : "Старт" }}
+                  </v-btn>
+                  <v-btn color="secondary" prepend-icon="mdi-restart" @click="resetTimer(task.id)">
+                    Сброс
+                  </v-btn>
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+          <v-alert v-else type="info" variant="tonal">
+            Пока нет задач. Добавьте первую, чтобы начать учет времени.
+          </v-alert>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script>
-import { da } from "vuetify/locale";
 import DayEvents from "./DayEvents.vue";
 import EventCalendar from "./EventCalendar.vue";
-import MainCalendar from "./MainCalendar.vue";
 
 export default {
   name: "HelloWorld",
   components: { DayEvents, EventCalendar },
   data: () => ({
     events: [],
-    links: [
+    now: Date.now(),
+    timerInterval: null,
+    taskSeed: 3,
+    tasks: [
       {
-        href: "https://vuetifyjs.com/",
-        icon: "mdi-text-box-outline",
-        subtitle: "Learn about all things Vuetify in our documentation.",
-        title: "Documentation",
+        id: 1,
+        title: "Подготовить отчет",
+        description: "Собрать метрики по проекту и оформить краткий отчет.",
+        elapsedMs: 0,
+        startedAt: null,
+        isRunning: false,
       },
       {
-        href: "https://vuetifyjs.com/introduction/why-vuetify/#feature-guides",
-        icon: "mdi-star-circle-outline",
-        subtitle: "Explore available framework Features.",
-        title: "Features",
-      },
-
-      {
-        href: "https://vuetifyjs.com/components/all",
-        icon: "mdi-widgets-outline",
-        subtitle: "Discover components in the API Explorer.",
-        title: "Components",
-      },
-
-      {
-        href: "https://discord.vuetifyjs.com",
-        icon: "mdi-account-group-outline",
-        subtitle: "Connect with Vuetify developers.",
-        title: "Community",
+        id: 2,
+        title: "Проверить баг-репорты",
+        description: "Отметить актуальные проблемы и приоритизировать исправления.",
+        elapsedMs: 0,
+        startedAt: null,
+        isRunning: false,
       },
     ],
   }),
-  mounted() {},
-
+  mounted() {
+    this.timerInterval = setInterval(() => {
+      this.now = Date.now();
+    }, 1000);
+  },
+  beforeUnmount() {
+    clearInterval(this.timerInterval);
+  },
   methods: {
     setEvents(data) {
       this.events = data;
     },
+    addTask() {
+      this.tasks.push({
+        id: this.taskSeed,
+        title: `Новая задача #${this.taskSeed}`,
+        description: "",
+        elapsedMs: 0,
+        startedAt: null,
+        isRunning: false,
+      });
+      this.taskSeed += 1;
+    },
+    removeTask(id) {
+      this.tasks = this.tasks.filter((task) => task.id !== id);
+    },
+    toggleTimer(id) {
+      const task = this.tasks.find((item) => item.id === id);
+      if (!task) {
+        return;
+      }
+
+      if (task.isRunning) {
+        task.elapsedMs += this.now - task.startedAt;
+        task.startedAt = null;
+        task.isRunning = false;
+      } else {
+        task.startedAt = this.now;
+        task.isRunning = true;
+      }
+    },
+    resetTimer(id) {
+      const task = this.tasks.find((item) => item.id === id);
+      if (!task) {
+        return;
+      }
+
+      task.elapsedMs = 0;
+      task.startedAt = task.isRunning ? this.now : null;
+    },
+    getTaskDuration(task) {
+      if (!task.isRunning || !task.startedAt) {
+        return task.elapsedMs;
+      }
+
+      return task.elapsedMs + (this.now - task.startedAt);
+    },
+    formatDuration(duration) {
+      const totalSeconds = Math.floor(duration / 1000);
+      const hours = Math.floor(totalSeconds / 3600)
+        .toString()
+        .padStart(2, "0");
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+        .toString()
+        .padStart(2, "0");
+      const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+
+      return `${hours}:${minutes}:${seconds}`;
+    },
   },
 };
 </script>
+
+<style scoped>
+.timer-box {
+  border: 2px solid rgb(var(--v-theme-primary));
+  border-radius: 16px;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+</style>

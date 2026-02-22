@@ -70,7 +70,23 @@
         <v-card-text class="d-flex flex-column ga-3">
           <v-text-field v-model="draftEvent.name" label="Название" />
           <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
-          <v-text-field v-model="draftEvent.color" label="Цвет (hex или css)" />
+          <v-text-field
+            v-model="draftEvent.startInput"
+            label="Начало"
+            type="datetime-local"
+          />
+          <v-text-field
+            v-model="draftEvent.endInput"
+            label="Окончание"
+            type="datetime-local"
+          />
+          <v-select
+            v-model="draftEvent.color"
+            item-title="title"
+            item-value="value"
+            :items="colorOptions"
+            label="Цвет"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -102,6 +118,15 @@
       draftEvent: {},
       pendingCompletion: {},
       completeWarningOpen: false,
+      colorOptions: [
+        { title: 'Синий', value: '#2196F3' },
+        { title: 'Индиго', value: '#3F51B5' },
+        { title: 'Фиолетовый', value: '#673AB7' },
+        { title: 'Бирюзовый', value: '#00BCD4' },
+        { title: 'Зелёный', value: '#4CAF50' },
+        { title: 'Оранжевый', value: '#FF9800' },
+        { title: 'Серый', value: '#757575' },
+      ],
     }),
     computed: {
       activeEvents () {
@@ -141,16 +166,38 @@
           name: event.name,
           details: event.details || '',
           color: event.color || '#2196F3',
+          start: event.start,
+          end: event.end,
+          startInput: this.toDateTimeInput(event.start),
+          endInput: this.toDateTimeInput(event.end),
         }
         this.isEditOpen = true
       },
       saveEvent () {
+        const startValue = this.parseDateTimeInput(this.draftEvent.startInput)
+        const endValue = this.parseDateTimeInput(this.draftEvent.endInput)
+        const validStart = startValue || new Date(this.draftEvent.start)
+        const validEnd = endValue || new Date(this.draftEvent.end)
+
         updateEventById(this.draftEvent.id, {
           name: this.draftEvent.name,
           details: this.draftEvent.details,
           color: this.draftEvent.color,
+          start: validStart,
+          end: Math.max(validEnd, validStart),
         })
         this.isEditOpen = false
+      },
+      toDateTimeInput (value) {
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return ''
+        const offset = date.getTimezoneOffset() * 60_000
+        return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+      },
+      parseDateTimeInput (value) {
+        if (!value) return null
+        const date = new Date(value)
+        return Number.isNaN(date.getTime()) ? null : date
       },
       getElapsedMs (event) {
         const elapsed = event?.elapsedMs || 0

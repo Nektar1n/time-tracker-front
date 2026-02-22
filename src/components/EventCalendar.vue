@@ -81,7 +81,23 @@
         <v-card-text class="d-flex flex-column ga-3">
           <v-text-field v-model="draftEvent.name" label="Название" />
           <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
-          <v-select v-model="draftEvent.color" :items="colors" label="Цвет" />
+          <v-text-field
+            v-model="draftEvent.startInput"
+            label="Начало"
+            type="datetime-local"
+          />
+          <v-text-field
+            v-model="draftEvent.endInput"
+            label="Окончание"
+            type="datetime-local"
+          />
+          <v-select
+            v-model="draftEvent.color"
+            item-title="title"
+            item-value="value"
+            :items="colorOptions"
+            label="Цвет"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -120,7 +136,15 @@
       mode: 'stack',
       weekday: [0, 1, 2, 3, 4, 5, 6],
       localEvents: [],
-      colors: ['#2196F3', '#3F51B5', '#673AB7', '#00BCD4', '#4CAF50', '#FF9800', '#757575'],
+      colorOptions: [
+        { title: 'Синий', value: '#2196F3' },
+        { title: 'Индиго', value: '#3F51B5' },
+        { title: 'Фиолетовый', value: '#673AB7' },
+        { title: 'Бирюзовый', value: '#00BCD4' },
+        { title: 'Зелёный', value: '#4CAF50' },
+        { title: 'Оранжевый', value: '#FF9800' },
+        { title: 'Серый', value: '#757575' },
+      ],
       names: ['Meeting', 'Holiday', 'PTO', 'Travel', 'Event', 'Birthday', 'Conference', 'Party'],
       dragEvent: null,
       dragTime: null,
@@ -249,16 +273,39 @@
         if (!event) return
 
         this.draftEvent = { ...event }
+        this.draftEvent.startInput = this.toDateTimeInput(event.start)
+        this.draftEvent.endInput = this.toDateTimeInput(event.end)
         this.isEditOpen = true
         nativeEvent.stopPropagation()
       },
       saveEvent () {
-        const idx = this.localEvents.findIndex(item => item.id === this.draftEvent.id)
+        const startValue = this.parseDateTimeInput(this.draftEvent.startInput)
+        const endValue = this.parseDateTimeInput(this.draftEvent.endInput)
+        const validStart = startValue || new Date(this.draftEvent.start)
+        const validEnd = endValue || new Date(this.draftEvent.end)
+
+        const { startInput: _startInput, endInput: _endInput, ...restDraft } = this.draftEvent
+        const idx = this.localEvents.findIndex(item => item.id === restDraft.id)
         if (idx !== -1) {
-          this.localEvents.splice(idx, 1, { ...this.draftEvent })
+          this.localEvents.splice(idx, 1, {
+            ...restDraft,
+            start: validStart,
+            end: Math.max(validEnd, validStart),
+          })
           this.emitEvents()
         }
         this.isEditOpen = false
+      },
+      toDateTimeInput (value) {
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return ''
+        const offset = date.getTimezoneOffset() * 60_000
+        return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+      },
+      parseDateTimeInput (value) {
+        if (!value) return null
+        const date = new Date(value)
+        return Number.isNaN(date.getTime()) ? null : date
       },
       emitEvents () {
         this.$emit('update:events', this.localEvents.map(item => ({ ...item })))
@@ -292,7 +339,7 @@
             details: '',
             start: first,
             end: second,
-            color: this.colors[this.rnd(0, this.colors.length - 1)],
+            color: this.rndElement(this.colorOptions).value,
             timed: !allDay,
             elapsedMs: 0,
             isRunning: false,
@@ -333,7 +380,7 @@
             id: crypto.randomUUID(),
             name: `Event #${this.localEvents.length}`,
             details: '',
-            color: this.rndElement(this.colors),
+            color: this.rndElement(this.colorOptions).value,
             start: new Date(this.createStart),
             end: new Date(this.createStart),
             timed: true,

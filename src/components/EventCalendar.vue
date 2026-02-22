@@ -82,8 +82,12 @@
         type: [String, Date],
         default: () => new Date(),
       },
+      scrollSync: {
+        type: Object,
+        default: null,
+      },
     },
-    emits: ['update:events', 'update:selected-date'],
+    emits: ['update:events', 'update:selected-date', 'sync-scroll'],
     data: () => ({
       calendarTitle: '',
       focus: '',
@@ -99,6 +103,8 @@
       createEvent: null,
       createStart: null,
       extendOriginal: null,
+      suppressScrollEmit: false,
+      scrollElement: null,
     }),
     watch: {
       events: {
@@ -114,12 +120,88 @@
           this.focus = value
         },
       },
+      type () {
+        this.$nextTick(() => {
+          this.bindScrollSync()
+        })
+      },
+      scrollSync: {
+        deep: true,
+        handler (value) {
+          if (!value || value.source === 'week-calendar') return
+          if (this.type !== 'week') return
+
+          this.applySyncedScroll(value.top)
+        },
+      },
     },
     mounted () {
       this.$refs.calendar.checkChange()
       this.calendarTitle = this.$refs.calendar.title || ''
+
+      this.$nextTick(() => {
+        this.bindScrollSync()
+      })
+    },
+    beforeUnmount () {
+      this.unbindScrollSync()
     },
     methods: {
+      bindScrollSync () {
+        this.unbindScrollSync()
+
+        if (this.type !== 'week') return
+
+        const el = this.getScrollElement()
+        if (!el) return
+
+        this.scrollElement = el
+        this.scrollElement.addEventListener('scroll', this.onInternalScroll, { passive: true })
+      },
+      unbindScrollSync () {
+        if (!this.scrollElement) return
+
+        this.scrollElement.removeEventListener('scroll', this.onInternalScroll)
+        this.scrollElement = null
+      },
+      getScrollElement () {
+        const root = this.$refs.calendar?.$el
+        if (!root) return null
+
+        const selectors = [
+          '.v-calendar-daily__scroll-area',
+          '.v-calendar-daily__body',
+          '.v-calendar-weekly__scroll-area',
+          '.v-calendar-weekly__scroll-container',
+          '.v-calendar-weekly__week',
+        ]
+
+        for (const selector of selectors) {
+          const node = root.querySelector(selector)
+          if (node && node.scrollHeight > node.clientHeight) return node
+        }
+
+        return Array.from(root.querySelectorAll('div')).find(
+          node => node.scrollHeight > node.clientHeight + 5,
+        ) || null
+      },
+      onInternalScroll (event) {
+        if (this.suppressScrollEmit) return
+        this.$emit('sync-scroll', {
+          source: 'week-calendar',
+          top: event.target.scrollTop,
+        })
+      },
+      applySyncedScroll (top) {
+        const el = this.getScrollElement()
+        if (!el) return
+
+        this.suppressScrollEmit = true
+        el.scrollTop = top
+        requestAnimationFrame(() => {
+          this.suppressScrollEmit = false
+        })
+      },
       emitEvents () {
         this.$emit('update:events', this.localEvents.map(item => ({ ...item })))
       },

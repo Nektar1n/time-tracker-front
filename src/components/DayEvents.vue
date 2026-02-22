@@ -102,8 +102,12 @@
         type: [String, Date],
         default: () => new Date(),
       },
+      scrollSync: {
+        type: Object,
+        default: null,
+      },
     },
-    emits: ['update:events'],
+    emits: ['update:events', 'sync-scroll'],
     data: () => ({
       focus: null,
       localEvents: [],
@@ -117,6 +121,8 @@
       ticker: null,
       isEditOpen: false,
       draftEvent: {},
+      suppressScrollEmit: false,
+      scrollElement: null,
     }),
     computed: {
       dayEvents () {
@@ -148,16 +154,80 @@
           }))
         },
       },
+      scrollSync: {
+        deep: true,
+        handler (value) {
+          if (!value || value.source === 'day-events') return
+          this.applySyncedScroll(value.top)
+        },
+      },
     },
     mounted () {
       this.ticker = setInterval(() => {
         this.timerTick = Date.now()
       }, 1000)
+
+      this.$nextTick(() => {
+        this.bindScrollSync()
+      })
     },
     beforeUnmount () {
       clearInterval(this.ticker)
+      this.unbindScrollSync()
     },
     methods: {
+      bindScrollSync () {
+        this.unbindScrollSync()
+
+        const el = this.getScrollElement()
+        if (!el) return
+
+        this.scrollElement = el
+        this.scrollElement.addEventListener('scroll', this.onInternalScroll, { passive: true })
+      },
+      unbindScrollSync () {
+        if (!this.scrollElement) return
+
+        this.scrollElement.removeEventListener('scroll', this.onInternalScroll)
+        this.scrollElement = null
+      },
+      getScrollElement () {
+        const root = this.$refs.calendar?.$el
+        if (!root) return null
+
+        const selectors = [
+          '.v-calendar-daily__scroll-area',
+          '.v-calendar-daily__body',
+          '.v-calendar-weekly__scroll-area',
+          '.v-calendar-weekly__scroll-container',
+        ]
+
+        for (const selector of selectors) {
+          const node = root.querySelector(selector)
+          if (node && node.scrollHeight > node.clientHeight) return node
+        }
+
+        return Array.from(root.querySelectorAll('div')).find(
+          node => node.scrollHeight > node.clientHeight + 5,
+        ) || null
+      },
+      onInternalScroll (event) {
+        if (this.suppressScrollEmit) return
+        this.$emit('sync-scroll', {
+          source: 'day-events',
+          top: event.target.scrollTop,
+        })
+      },
+      applySyncedScroll (top) {
+        const el = this.getScrollElement()
+        if (!el) return
+
+        this.suppressScrollEmit = true
+        el.scrollTop = top
+        requestAnimationFrame(() => {
+          this.suppressScrollEmit = false
+        })
+      },
       openEditEventById (eventId) {
         const event = this.localEvents.find(item => item.id === eventId)
         if (!event) return

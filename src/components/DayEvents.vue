@@ -6,196 +6,276 @@
         v-model="focus"
         :event-color="getEventColor"
         :event-ripple="false"
-        :events="events"
+        :events="dayEvents"
         type="day"
-        @change="initEvents"
+        @click:event="openEditEvent"
         @mousedown:event="startDrag"
         @mousedown:time="startTime"
         @mouseleave="cancelDrag"
         @mousemove:time="mouseMove"
         @mouseup:time="endDrag"
       >
-        <template v-slot:event="{ event, timed, eventSummary }">
-          <div class="v-event-draggable">
-            <component :is="eventSummary"></component>
+        <template #event="{ event, timed, eventSummary }">
+          <div
+            class="v-event-draggable d-flex align-center ga-1"
+            draggable="true"
+            @dragstart="startExternalDrag(event, $event)"
+          >
+            <v-btn
+              icon
+              size="x-small"
+              variant="text"
+              @click.stop="toggleTimer(event)"
+            >
+              <v-icon size="14">{{ event.isRunning ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+            </v-btn>
+            <component :is="eventSummary" />
+            <small>{{ formatElapsed(event) }}</small>
           </div>
           <div
             v-if="timed"
             class="v-event-drag-bottom"
             @mousedown.stop="extendBottom(event)"
-          ></div>
+          />
         </template>
       </v-calendar>
     </v-sheet>
+
+    <v-dialog v-model="isEditOpen" max-width="450">
+      <v-card>
+        <v-card-title>Редактирование задачи</v-card-title>
+        <v-card-text class="d-flex flex-column ga-3">
+          <v-text-field v-model="draftEvent.name" label="Название" />
+          <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
+          <v-select v-model="draftEvent.color" :items="colors" label="Цвет" />
+          <div class="text-caption">Таймер: {{ formatElapsed(draftEvent) }}</div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
+          <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
-export default {
-  name: "DayEvents",
-  data: () => ({
-    events: [],
-    focus: null,
+  export default {
+    name: 'DayEvents',
+    props: {
+      events: {
+        type: Array,
+        default: () => [],
+      },
+      selectedDate: {
+        type: [String, Date],
+        default: () => new Date(),
+      },
+    },
+    emits: ['update:events'],
+    data: () => ({
+      focus: null,
+      localEvents: [],
+      colors: ['#2196F3', '#3F51B5', '#673AB7', '#00BCD4', '#4CAF50', '#FF9800', '#757575'],
+      dragEvent: null,
+      dragTime: null,
+      createEvent: null,
+      createStart: null,
+      extendOriginal: null,
+      timerTick: 0,
+      ticker: null,
+      isEditOpen: false,
+      draftEvent: {},
+    }),
+    computed: {
+      dayEvents () {
+        const selected = new Date(this.focus)
+        return this.localEvents.filter(item => {
+          const start = new Date(item.start)
+          const end = new Date(item.end)
+          return start.toDateString() === selected.toDateString() || end.toDateString() === selected.toDateString()
+        })
+      },
+    },
+    watch: {
+      selectedDate: {
+        immediate: true,
+        handler (value) {
+          this.focus = new Date(value)
+        },
+      },
+      events: {
+        immediate: true,
+        deep: true,
+        handler (value) {
+          this.localEvents = value.map(item => ({ ...item }))
+        },
+      },
+    },
+    mounted () {
+      this.ticker = setInterval(() => {
+        this.timerTick = Date.now()
+      }, 1000)
+    },
+    beforeUnmount () {
+      clearInterval(this.ticker)
+    },
+    methods: {
+      emitEvents () {
+        this.$emit('update:events', this.localEvents.map(item => ({ ...item })))
+      },
+      openEditEvent (nativeEvent, payload) {
+        const event = payload?.event
+        if (!event) return
+        this.draftEvent = { ...event }
+        this.isEditOpen = true
+        nativeEvent.stopPropagation()
+      },
+      saveEvent () {
+        const idx = this.localEvents.findIndex(item => item.id === this.draftEvent.id)
+        if (idx !== -1) {
+          this.localEvents.splice(idx, 1, { ...this.draftEvent })
+          this.emitEvents()
+        }
+        this.isEditOpen = false
+      },
+      toggleTimer (event) {
+        const idx = this.localEvents.findIndex(item => item.id === event.id)
+        if (idx === -1) return
 
-    colors: [
-      "#2196F3",
-      "#3F51B5",
-      "#673AB7",
-      "#00BCD4",
-      "#4CAF50",
-      "#FF9800",
-      "#757575",
-    ],
-    names: [
-      "Meeting",
-      "Holiday",
-      "PTO",
-      "Travel",
-      "Event",
-      "Birthday",
-      "Conference",
-      "Party",
-    ],
-    dragEvent: null,
-    dragStart: null,
-    createEvent: null,
-    createStart: null,
-    extendOriginal: null,
-  }),
-  props: {
-    value: {
-      type: Object,
-      default: () => ({}),
-    },
-  },
-  watch: {
-    value: "initEvents",
-  },
-  methods: {
-    initEvents() {
-      this.events = this.value.eventsDay;
-      this.focus = this.value.date;
-      console.log(this.value, "valuev");
-      return this.events;
-    },
-    getEventColor(event) {
-      return event.color;
-    },
-    startDrag(nativeEvent, { event, timed }) {
-      if (event && timed) {
-        this.dragEvent = event;
-        this.dragTime = null;
-        this.extendOriginal = null;
-      }
-    },
-    startTime(nativeEvent, tms) {
-      const mouse = this.toTime(tms);
-
-      if (this.dragEvent && this.dragTime === null) {
-        const start = this.dragEvent.start;
-
-        this.dragTime = mouse - start;
-      } else {
-        this.createStart = this.roundTime(mouse);
-        this.createEvent = {
-          name: `Event #${this.events.length}`,
-          color: this.rndElement(this.colors),
-          start: this.createStart,
-          end: this.createStart,
-          timed: true,
-        };
-
-        this.events.push(this.createEvent);
-      }
-    },
-    extendBottom(event) {
-      this.createEvent = event;
-      this.createStart = event.start;
-      this.extendOriginal = event.end;
-    },
-    mouseMove(nativeEvent, tms) {
-      const mouse = this.toTime(tms);
-
-      if (this.dragEvent && this.dragTime !== null) {
-        const start = this.dragEvent.start;
-        const end = this.dragEvent.end;
-        const duration = end - start;
-        const newStartTime = mouse - this.dragTime;
-        const newStart = this.roundTime(newStartTime);
-        const newEnd = newStart + duration;
-
-        this.dragEvent.start = newStart;
-        this.dragEvent.end = newEnd;
-      } else if (this.createEvent && this.createStart !== null) {
-        const mouseRounded = this.roundTime(mouse, false);
-        const min = Math.min(mouseRounded, this.createStart);
-        const max = Math.max(mouseRounded, this.createStart);
-
-        this.createEvent.start = min;
-        this.createEvent.end = max;
-      }
-    },
-    endDrag() {
-      this.dragTime = null;
-      this.dragEvent = null;
-      this.createEvent = null;
-      this.createStart = null;
-      this.extendOriginal = null;
-    },
-    cancelDrag() {
-      if (this.createEvent) {
-        if (this.extendOriginal) {
-          this.createEvent.end = this.extendOriginal;
+        const current = { ...this.localEvents[idx] }
+        if (current.isRunning) {
+          current.elapsedMs = (current.elapsedMs || 0) + (Date.now() - current.timerStartedAt)
+          current.timerStartedAt = null
+          current.isRunning = false
         } else {
-          const i = this.events.indexOf(this.createEvent);
-          if (i !== -1) {
-            this.events.splice(i, 1);
+          current.timerStartedAt = Date.now()
+          current.isRunning = true
+        }
+
+        this.localEvents.splice(idx, 1, current)
+        this.emitEvents()
+      },
+      getElapsedMs (event) {
+        const elapsed = event?.elapsedMs || 0
+        if (event?.isRunning && event?.timerStartedAt) {
+          return elapsed + (this.timerTick - event.timerStartedAt)
+        }
+        return elapsed
+      },
+      formatElapsed (event) {
+        const value = this.getElapsedMs(event)
+        const totalSeconds = Math.max(0, Math.floor(value / 1000))
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
+        const s = String(totalSeconds % 60).padStart(2, '0')
+        return `${h}:${m}:${s}`
+      },
+      startExternalDrag (event, nativeEvent) {
+        nativeEvent.dataTransfer.dropEffect = 'move'
+        nativeEvent.dataTransfer.setData('eventId', event.id)
+      },
+      startDrag (nativeEvent, { event, timed }) {
+        if (event && timed) {
+          this.dragEvent = event
+          this.dragTime = null
+          this.extendOriginal = null
+        }
+      },
+      startTime (nativeEvent, tms) {
+        const mouse = this.toTime(tms)
+
+        if (this.dragEvent && this.dragTime === null) {
+          this.dragTime = mouse - new Date(this.dragEvent.start).getTime()
+        } else {
+          this.createStart = this.roundTime(mouse)
+          this.createEvent = {
+            id: crypto.randomUUID(),
+            name: `Event #${this.localEvents.length}`,
+            details: '',
+            color: this.rndElement(this.colors),
+            start: new Date(this.createStart),
+            end: new Date(this.createStart),
+            timed: true,
+            elapsedMs: 0,
+            isRunning: false,
+          }
+
+          this.localEvents.push(this.createEvent)
+          this.emitEvents()
+        }
+      },
+      extendBottom (event) {
+        this.createEvent = event
+        this.createStart = new Date(event.start).getTime()
+        this.extendOriginal = event.end
+      },
+      mouseMove (nativeEvent, tms) {
+        const mouse = this.toTime(tms)
+
+        if (this.dragEvent && this.dragTime !== null) {
+          const start = new Date(this.dragEvent.start).getTime()
+          const end = new Date(this.dragEvent.end).getTime()
+          const duration = end - start
+          const newStart = this.roundTime(mouse - this.dragTime)
+
+          this.dragEvent.start = new Date(newStart)
+          this.dragEvent.end = new Date(newStart + duration)
+          this.emitEvents()
+        } else if (this.createEvent && this.createStart !== null) {
+          const mouseRounded = this.roundTime(mouse, false)
+          const min = Math.min(mouseRounded, this.createStart)
+          const max = Math.max(mouseRounded, this.createStart)
+
+          this.createEvent.start = new Date(min)
+          this.createEvent.end = new Date(max)
+          this.emitEvents()
+        }
+      },
+      endDrag () {
+        this.dragTime = null
+        this.dragEvent = null
+        this.createEvent = null
+        this.createStart = null
+        this.extendOriginal = null
+      },
+      cancelDrag () {
+        if (this.createEvent) {
+          if (this.extendOriginal) {
+            this.createEvent.end = this.extendOriginal
+          } else {
+            const i = this.localEvents.indexOf(this.createEvent)
+            if (i !== -1) {
+              this.localEvents.splice(i, 1)
+              this.emitEvents()
+            }
           }
         }
-      }
 
-      this.createEvent = null;
-      this.createStart = null;
-      this.dragTime = null;
-      this.dragEvent = null;
+        this.createEvent = null
+        this.createStart = null
+        this.dragTime = null
+        this.dragEvent = null
+      },
+      roundTime (time, down = true) {
+        const roundDownTime = 15 * 60 * 1000
+        return down ? time - (time % roundDownTime) : time + (roundDownTime - (time % roundDownTime))
+      },
+      toTime (tms) {
+        return new Date(tms.year, tms.month - 1, tms.day, tms.hour, tms.minute).getTime()
+      },
+      getEventColor (event) {
+        return event.color
+      },
+      rndElement (arr) {
+        return arr[this.rnd(0, arr.length - 1)]
+      },
+      rnd (a, b) {
+        return Math.floor((b - a + 1) * Math.random()) + a
+      },
     },
-    roundTime(time, down = true) {
-      const roundTo = 15; // minutes
-      const roundDownTime = roundTo * 60 * 1000;
-
-      return down
-        ? time - (time % roundDownTime)
-        : time + (roundDownTime - (time % roundDownTime));
-    },
-    toTime(tms) {
-      return new Date(
-        tms.year,
-        tms.month - 1,
-        tms.day,
-        tms.hour,
-        tms.minute,
-      ).getTime();
-    },
-    getEventColor(event) {
-      const rgb = parseInt(event.color.substring(1), 16);
-      const r = (rgb >> 16) & 0xff;
-      const g = (rgb >> 8) & 0xff;
-      const b = (rgb >> 0) & 0xff;
-
-      return event === this.dragEvent
-        ? `rgba(${r}, ${g}, ${b}, 0.7)`
-        : event === this.createEvent
-          ? `rgba(${r}, ${g}, ${b}, 0.7)`
-          : event.color;
-    },
-    rndElement(arr) {
-      return arr[this.rnd(0, arr.length - 1)];
-    },
-    rnd(a, b) {
-      return Math.floor((b - a + 1) * Math.random()) + a;
-    },
-  },
-};
+  }
 </script>
 
 <style scoped>
@@ -215,22 +295,5 @@ export default {
   bottom: 4px;
   height: 4px;
   cursor: ns-resize;
-
-  &::after {
-    display: none;
-    position: absolute;
-    left: 50%;
-    height: 4px;
-    border-top: 1px solid white;
-    border-bottom: 1px solid white;
-    width: 16px;
-    margin-left: -8px;
-    opacity: 0.8;
-    content: "";
-  }
-
-  &:hover::after {
-    display: block;
-  }
 }
 </style>

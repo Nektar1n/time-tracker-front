@@ -1,24 +1,36 @@
 <template>
   <v-container class="fill-height d-flex align-center" max-width="1200">
     <div class="w-100">
-      <v-sheet
-        v-if="activeEvents.length > 0"
-        class="running-timer-bar px-4 py-3 mb-4"
-        color="surface"
-        rounded="lg"
+      <transition-group
+        name="active-timers-pop"
+        tag="div"
+        class="running-timer-popup-list"
       >
-        <div class="d-flex flex-column ga-1">
-          <div class="text-subtitle-1 font-weight-bold">
-            Активные таймеры ({{ activeEvents.length }})
-          </div>
-          <div
-            v-for="event in activeEvents"
-            :key="event.id"
-            class="running-event-row d-flex align-center justify-space-between ga-4"
-            :style="{ borderLeftColor: event.color || '#2196F3' }"
-            @click="openEventEditor(event.id)"
-          >
-            <div class="d-flex align-center ga-2">
+        <v-sheet
+          v-for="event in activeEvents"
+          :key="event.id"
+          class="running-timer-popup px-4 py-3"
+          color="surface"
+          rounded="lg"
+          @click="openEventEditor(event.id)"
+        >
+          <div class="d-flex align-center justify-space-between ga-3">
+            <div class="d-flex align-center ga-2 running-event-main">
+              <span
+                class="running-event-dot"
+                :style="{ backgroundColor: event.color || '#2196F3' }"
+              />
+              <div class="d-flex flex-column">
+                <span class="font-weight-medium">{{ event.name }}</span>
+                <small
+                  v-if="event.details"
+                  class="running-event-details"
+                >
+                  {{ event.details }}
+                </small>
+              </div>
+            </div>
+            <div class="d-flex align-center ga-1">
               <v-btn
                 :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
                 size="x-small"
@@ -26,21 +38,24 @@
                 variant="text"
                 @click.stop="toggleTimer(event.id)"
               />
-              <span
-                class="running-event-dot"
-                :style="{ backgroundColor: event.color || '#2196F3' }"
+              <v-btn
+                icon="mdi-check"
+                size="x-small"
+                title="Завершить событие"
+                variant="text"
+                color="success"
+                @click.stop="completeEvent(event.id)"
               />
-              <span>{{ event.name }}</span>
-            </div>
-            <div
-              class="running-timer-value"
-              :style="{ color: event.color || '#2196F3' }"
-            >
-              {{ formatElapsed(event) }}
+              <div
+                class="running-timer-value"
+                :style="{ color: event.color || '#2196F3' }"
+              >
+                {{ formatElapsed(event) }}
+              </div>
             </div>
           </div>
-        </div>
-      </v-sheet>
+        </v-sheet>
+      </transition-group>
 
       <v-row>
         <v-col cols="6">
@@ -57,9 +72,9 @@
               :events="events"
               :scroll-sync="scrollSync"
               :selected-date="selectedDate"
-              @sync-scroll="syncScroll"
-              @update:events="setAllEvents"
-              @update:selected-date="setSelectedDate"
+              @sync-scroll="onSyncScroll"
+              @update:events="onSetAllEvents"
+              @update:selected-date="onSetSelectedDate"
             />
           </v-card>
         </v-col>
@@ -69,8 +84,8 @@
             :events="events"
             :scroll-sync="scrollSync"
             :selected-date="selectedDate"
-            @sync-scroll="syncScroll"
-            @update:events="setAllEvents"
+            @sync-scroll="onSyncScroll"
+            @update:events="onSetAllEvents"
           />
         </v-col>
       </v-row>
@@ -81,18 +96,32 @@
 <script>
   import DayEvents from './DayEvents.vue'
   import EventCalendar from './EventCalendar.vue'
+  import {
+    completeEventById,
+    setAllEvents,
+    setSelectedDate,
+    state,
+    syncScroll,
+    toggleTimerById,
+  } from '@/modules/timers/timerState'
 
   export default {
     name: 'HelloWorld',
     components: { DayEvents, EventCalendar },
     data: () => ({
-      events: [],
-      selectedDate: new Date(),
-      scrollSync: null,
       timerTick: Date.now(),
       ticker: null,
     }),
     computed: {
+      events () {
+        return state.events
+      },
+      selectedDate () {
+        return state.selectedDate
+      },
+      scrollSync () {
+        return state.scrollSync
+      },
       activeEvents () {
         return this.events.filter(
           item => !item.isCompleted && (item.isRunning || (item.elapsedMs || 0) > 0),
@@ -108,42 +137,23 @@
       clearInterval(this.ticker)
     },
     methods: {
-      setAllEvents (events) {
-        this.events = [...events]
+      onSetAllEvents (events) {
+        setAllEvents(events)
       },
-      setSelectedDate (date) {
-        this.selectedDate = new Date(date)
+      onSetSelectedDate (date) {
+        setSelectedDate(date)
       },
-      syncScroll (payload) {
-        this.scrollSync = {
-          ...payload,
-          stamp: Date.now(),
-        }
+      onSyncScroll (payload) {
+        syncScroll(payload)
       },
       openEventEditor (eventId) {
         this.$refs.dayEventsRef?.openEditEventById(eventId)
       },
-      pauseEvent (event) {
-        if (!event?.isRunning) return event
-        return {
-          ...event,
-          elapsedMs: (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt),
-          timerStartedAt: null,
-          isRunning: false,
-        }
-      },
       toggleTimer (eventId) {
-        const idx = this.events.findIndex(item => item.id === eventId)
-        if (idx === -1) return
-
-        const current = { ...this.events[idx] }
-        if (current.isCompleted) return
-
-        const updated = current.isRunning
-          ? this.pauseEvent(current)
-          : { ...current, timerStartedAt: Date.now(), isRunning: true }
-
-        this.events.splice(idx, 1, updated)
+        toggleTimerById(eventId)
+      },
+      completeEvent (eventId) {
+        completeEventById(eventId)
       },
       getElapsedMs (event) {
         const elapsed = event?.elapsedMs || 0
@@ -167,21 +177,39 @@
 </script>
 
 <style scoped>
-.running-timer-bar {
-  position: sticky;
-  top: 8px;
-  z-index: 20;
-  border: 1px solid rgb(var(--v-theme-surface-variant));
+.running-timer-popup-list {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 120;
+  width: min(500px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.running-event-row {
-  border-left: 4px solid;
-  border-radius: 8px;
-  padding: 6px 10px;
-  border-bottom: 0.5px solid;
-  border-top: 0.5px solid;
-  border-right: 0.5px solid;
+.running-timer-popup {
+  border: 1px solid rgb(var(--v-theme-surface-variant));
+  opacity: 0.72;
+  backdrop-filter: blur(2px);
+  transition: opacity 0.2s ease;
   cursor: pointer;
+}
+
+.running-timer-popup:hover {
+  opacity: 1;
+}
+
+.running-event-main {
+  min-width: 0;
+}
+
+.running-event-details {
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
 }
 
 .running-event-dot {
@@ -191,9 +219,22 @@
 }
 
 .running-timer-value {
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0.6px;
+  min-width: 84px;
+  text-align: right;
+}
+
+.active-timers-pop-enter-active,
+.active-timers-pop-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.active-timers-pop-enter-from,
+.active-timers-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 </style>

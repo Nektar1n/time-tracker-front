@@ -1,46 +1,56 @@
 <template>
   <v-container class="fill-height d-flex align-center" max-width="1200">
     <div class="w-100">
-      <v-sheet
-        v-if="activeEvents.length > 0"
-        class="running-timer-bar px-4 py-3 mb-4"
-        color="surface"
-        rounded="lg"
-      >
-        <div class="d-flex flex-column ga-1">
-          <div class="text-subtitle-1 font-weight-bold">
-            Активные таймеры ({{ activeEvents.length }})
-          </div>
-          <div
-            v-for="event in activeEvents"
-            :key="event.id"
-            class="running-event-row d-flex align-center justify-space-between ga-4"
-            :style="{ borderLeftColor: event.color || '#2196F3' }"
-            @click="openEventEditor(event.id)"
-          >
-            <div class="d-flex align-center ga-2">
-              <v-btn
-                :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
-                size="x-small"
-                :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
-                variant="text"
-                @click.stop="toggleTimer(event.id)"
-              />
-              <span
-                class="running-event-dot"
-                :style="{ backgroundColor: event.color || '#2196F3' }"
-              />
-              <span>{{ event.name }}</span>
+      <transition name="active-timers-pop">
+        <v-sheet
+          v-if="activeEvents.length > 0"
+          class="running-timer-popup px-4 py-3"
+          color="surface"
+          rounded="lg"
+        >
+          <div class="d-flex flex-column ga-1">
+            <div class="text-subtitle-1 font-weight-bold">
+              Активные таймеры ({{ activeEvents.length }})
             </div>
             <div
-              class="running-timer-value"
-              :style="{ color: event.color || '#2196F3' }"
+              v-for="event in activeEvents"
+              :key="event.id"
+              class="running-event-row d-flex align-center justify-space-between ga-4"
+              :style="{ borderLeftColor: event.color || '#2196F3' }"
+              @click="openEventEditor(event.id)"
             >
-              {{ formatElapsed(event) }}
+              <div class="d-flex align-center ga-2 running-event-main">
+                <v-btn
+                  :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
+                  size="x-small"
+                  :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
+                  variant="text"
+                  @click.stop="toggleTimer(event.id)"
+                />
+                <span
+                  class="running-event-dot"
+                  :style="{ backgroundColor: event.color || '#2196F3' }"
+                />
+                <div class="d-flex flex-column">
+                  <span>{{ event.name }}</span>
+                  <small
+                    v-if="event.details"
+                    class="running-event-details"
+                  >
+                    {{ event.details }}
+                  </small>
+                </div>
+              </div>
+              <div
+                class="running-timer-value"
+                :style="{ color: event.color || '#2196F3' }"
+              >
+                {{ formatElapsed(event) }}
+              </div>
             </div>
           </div>
-        </div>
-      </v-sheet>
+        </v-sheet>
+      </transition>
 
       <v-row>
         <v-col cols="6">
@@ -167,11 +177,22 @@
 </script>
 
 <style scoped>
-.running-timer-bar {
-  position: sticky;
-  top: 8px;
-  z-index: 20;
+.running-timer-popup {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 120;
   border: 1px solid rgb(var(--v-theme-surface-variant));
+  width: min(460px, calc(100vw - 32px));
+  max-height: 45vh;
+  overflow-y: auto;
+  opacity: 0.72;
+  backdrop-filter: blur(2px);
+  transition: opacity 0.2s ease;
+}
+
+.running-timer-popup:hover {
+  opacity: 1;
 }
 
 .running-event-row {
@@ -182,6 +203,18 @@
   border-top: 0.5px solid;
   border-right: 0.5px solid;
   cursor: pointer;
+}
+
+.running-event-main {
+  min-width: 0;
+}
+
+.running-event-details {
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 230px;
 }
 
 .running-event-dot {
@@ -195,5 +228,16 @@
   line-height: 1;
   font-weight: 800;
   letter-spacing: 1px;
+}
+
+.active-timers-pop-enter-active,
+.active-timers-pop-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.active-timers-pop-enter-from,
+.active-timers-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
 }
 </style>

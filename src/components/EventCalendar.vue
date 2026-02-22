@@ -42,9 +42,12 @@
         <template #day-label="{ day, date }">
           <div class="pa-1">
             <v-btn
+              class="calendar-day-btn"
+              :class="{ 'calendar-day-btn--active': isActiveDate(date) }"
               rounded="xl"
               size="small"
-              :variant="date === focus ? 'outlined' : 'text'"
+              :color="isActiveDate(date) ? 'primary' : undefined"
+              :variant="isActiveDate(date) ? 'flat' : 'text'"
               @click="viewDay(date)"
               @dragover.prevent
               @drop.prevent="onDropToDate(date, $event)"
@@ -55,9 +58,12 @@
         </template>
         <template #day-label-header="{ day, date }">
           <v-btn
+            class="calendar-day-btn"
+            :class="{ 'calendar-day-btn--active': isActiveDate(date) }"
             rounded="xl"
             size="small"
-            :variant="date === focus ? 'outlined' : 'text'"
+            :color="isActiveDate(date) ? 'primary' : undefined"
+            :variant="isActiveDate(date) ? 'flat' : 'text'"
             @click="viewDay(date)"
             @dragover.prevent
             @drop.prevent="onDropToDate(date, $event)"
@@ -201,6 +207,18 @@
         requestAnimationFrame(() => {
           this.suppressScrollEmit = false
         })
+      },
+      isActiveDate (date) {
+        return this.normalizeDate(date) === this.normalizeDate(this.focus)
+      },
+      normalizeDate (value) {
+        if (!value) return ''
+        if (value instanceof Date) return value.toISOString().slice(0, 10)
+
+        const parsed = new Date(value)
+        if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
+
+        return String(value).slice(0, 10)
       },
       emitEvents () {
         this.$emit('update:events', this.localEvents.map(item => ({ ...item })))
@@ -366,3 +384,18 @@
     },
   }
 </script>
+
+<style scoped>
+  .calendar-day-btn {
+    transition: all 0.2s ease;
+  }
+
+  .calendar-day-btn--active {
+    box-shadow: 0 0 0 2px rgb(var(--v-theme-primary));
+    font-weight: 700;
+  }
+
+  .calendar-day-btn--active :deep(*) {
+    color: rgb(var(--v-theme-on-primary));
+  }
+</style>

@@ -1,18 +1,53 @@
 <template>
-  <v-container class="fill-height d-flex align-center" max-width="1200">
+  <site-header v-model="activeView" />
+
+  <v-container class="fill-height d-flex align-start pt-8" max-width="1200">
     <div class="w-100">
       <v-sheet
-        v-if="runningEvent"
-        class="running-timer-bar px-4 py-3 mb-4 d-flex align-center justify-space-between"
+        v-if="runningEvents.length > 0"
+        class="running-timer-bar px-4 py-3 mb-4"
         color="primary"
         rounded="lg"
       >
-        <div class="text-subtitle-1 font-weight-bold">{{ runningEvent.name }}</div>
-        <div class="running-timer-value">{{ formatElapsed(runningEvent) }}</div>
+        <div class="text-subtitle-1 font-weight-bold mb-2">Активные таймеры</div>
+        <div class="d-flex flex-wrap ga-3">
+          <v-chip
+            v-for="event in runningEvents"
+            :key="event.id"
+            color="white"
+            text-color="primary"
+            variant="flat"
+          >
+            {{ event.name }} — {{ formatElapsed(event) }}
+          </v-chip>
+        </div>
       </v-sheet>
 
-      <v-row>
-        <v-col cols="6">
+      <v-row v-if="activeView === 'profile'">
+        <v-col cols="12">
+          <v-card rounded="lg" variant="tonal">
+            <v-card-title>Личный кабинет</v-card-title>
+            <v-card-text class="d-flex flex-column ga-2">
+              <div><strong>Пользователь:</strong> Demo User</div>
+              <div><strong>Задач всего:</strong> {{ events.length }}</div>
+              <div><strong>Запущено таймеров:</strong> {{ runningEvents.length }}</div>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <v-row v-else-if="activeView === 'timer'">
+        <v-col cols="12">
+          <day-events
+            :events="events"
+            :selected-date="selectedDate"
+            @update:events="setAllEvents"
+          />
+        </v-col>
+      </v-row>
+
+      <v-row v-else>
+        <v-col cols="12">
           <v-card
             class="py-4"
             color="surface-variant"
@@ -29,13 +64,6 @@
             />
           </v-card>
         </v-col>
-        <v-col cols="6">
-          <day-events
-            :events="events"
-            :selected-date="selectedDate"
-            @update:events="setAllEvents"
-          />
-        </v-col>
       </v-row>
     </div>
   </v-container>
@@ -44,19 +72,21 @@
 <script>
   import DayEvents from './DayEvents.vue'
   import EventCalendar from './EventCalendar.vue'
+  import SiteHeader from './SiteHeader.vue'
 
   export default {
     name: 'HelloWorld',
-    components: { DayEvents, EventCalendar },
+    components: { DayEvents, EventCalendar, SiteHeader },
     data: () => ({
       events: [],
       selectedDate: new Date(),
+      activeView: 'timer',
       timerTick: Date.now(),
       ticker: null,
     }),
     computed: {
-      runningEvent () {
-        return this.events.find(item => item.isRunning)
+      runningEvents () {
+        return this.events.filter(item => item.isRunning)
       },
     },
     mounted () {
@@ -95,15 +125,8 @@
 <style scoped>
 .running-timer-bar {
   position: sticky;
-  top: 8px;
+  top: 76px;
   z-index: 20;
   color: white;
-}
-
-.running-timer-value {
-  font-size: 34px;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: 1px;
 }
 </style>

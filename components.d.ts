@@ -18,5 +18,6 @@ declare module 'vue' {
     MainCalendar: typeof import('./src/components/MainCalendar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SiteHeader: typeof import('./src/components/SiteHeader.vue')['default']
   }
 }

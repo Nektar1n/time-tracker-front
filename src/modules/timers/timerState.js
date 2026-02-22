@@ -44,6 +44,17 @@ const completeEventById = (eventId) => {
   })
 }
 
+const updateEventById = (eventId, patch) => {
+  const idx = state.events.findIndex(item => item.id === eventId)
+  if (idx === -1) return
+
+  const current = state.events[idx]
+  state.events.splice(idx, 1, {
+    ...current,
+    ...patch,
+  })
+}
+
 const setAllEvents = (events) => {
   state.events = [...events]
 }
@@ -66,4 +77,5 @@ export {
   syncScroll,
   toggleTimerById,
   completeEventById,
+  updateEventById,
 }

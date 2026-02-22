@@ -43,6 +43,13 @@
             >
               {{ event.isRunning ? 'Пауза' : 'Продолжить' }}
             </v-btn>
+            <v-btn
+              prepend-icon="mdi-pencil"
+              variant="text"
+              @click="openEdit(event)"
+            >
+              Редактировать
+            </v-btn>
             <v-spacer />
             <v-btn
               color="success"
@@ -56,17 +63,45 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-dialog v-model="isEditOpen" max-width="500">
+      <v-card>
+        <v-card-title>Редактирование события</v-card-title>
+        <v-card-text class="d-flex flex-column ga-3">
+          <v-text-field v-model="draftEvent.name" label="Название" />
+          <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
+          <v-text-field v-model="draftEvent.color" label="Цвет (hex или css)" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
+          <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-snackbar
+      v-model="completeWarningOpen"
+      color="warning"
+      timeout="1800"
+    >
+      Нажмите «Завершить» ещё раз, чтобы подтвердить
+    </v-snackbar>
   </v-container>
 </template>
 
 <script>
-  import { completeEventById, state, toggleTimerById } from '@/modules/timers/timerState'
+  import { completeEventById, state, toggleTimerById, updateEventById } from '@/modules/timers/timerState'
 
   export default {
     name: 'ActiveTimersPage',
     data: () => ({
       timerTick: Date.now(),
       ticker: null,
+      isEditOpen: false,
+      draftEvent: {},
+      pendingCompletion: {},
+      completeWarningOpen: false,
     }),
     computed: {
       activeEvents () {
@@ -88,7 +123,34 @@
         toggleTimerById(eventId)
       },
       completeEvent (eventId) {
+        if (!this.pendingCompletion[eventId]) {
+          this.pendingCompletion[eventId] = true
+          this.completeWarningOpen = true
+          setTimeout(() => {
+            this.pendingCompletion[eventId] = false
+          }, 1800)
+          return
+        }
+
+        this.pendingCompletion[eventId] = false
         completeEventById(eventId)
+      },
+      openEdit (event) {
+        this.draftEvent = {
+          id: event.id,
+          name: event.name,
+          details: event.details || '',
+          color: event.color || '#2196F3',
+        }
+        this.isEditOpen = true
+      },
+      saveEvent () {
+        updateEventById(this.draftEvent.id, {
+          name: this.draftEvent.name,
+          details: this.draftEvent.details,
+          color: this.draftEvent.color,
+        })
+        this.isEditOpen = false
       },
       getElapsedMs (event) {
         const elapsed = event?.elapsedMs || 0

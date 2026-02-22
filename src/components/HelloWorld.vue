@@ -57,6 +57,14 @@
         </v-sheet>
       </transition-group>
 
+      <v-snackbar
+        v-model="completeWarningOpen"
+        color="warning"
+        timeout="1800"
+      >
+        Нажмите «Завершить» ещё раз, чтобы подтвердить
+      </v-snackbar>
+
       <v-row>
         <v-col cols="6">
           <v-card
@@ -111,6 +119,8 @@
     data: () => ({
       timerTick: Date.now(),
       ticker: null,
+      completeWarningOpen: false,
+      pendingCompletion: {},
     }),
     computed: {
       events () {
@@ -153,6 +163,16 @@
         toggleTimerById(eventId)
       },
       completeEvent (eventId) {
+        if (!this.pendingCompletion[eventId]) {
+          this.pendingCompletion[eventId] = true
+          this.completeWarningOpen = true
+          setTimeout(() => {
+            this.pendingCompletion[eventId] = false
+          }, 1800)
+          return
+        }
+
+        this.pendingCompletion[eventId] = false
         completeEventById(eventId)
       },
       getElapsedMs (event) {
@@ -179,7 +199,7 @@
 <style scoped>
 .running-timer-popup-list {
   position: fixed;
-  top: 16px;
+  top: calc(var(--v-layout-top) + 8px);
   right: 16px;
   z-index: 120;
   width: min(500px, calc(100vw - 32px));
@@ -236,16 +256,5 @@
 .active-timers-pop-leave-to {
   opacity: 0;
   transform: translateY(-6px);
-}
-
-.active-timers-pop-enter-active,
-.active-timers-pop-leave-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-.active-timers-pop-enter-from,
-.active-timers-pop-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.98);
 }
 </style>

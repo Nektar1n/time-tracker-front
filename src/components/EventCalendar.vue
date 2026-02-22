@@ -156,6 +156,7 @@
             timed: !allDay,
             elapsedMs: 0,
             isRunning: false,
+            isCompleted: false,
           })
         }
 
@@ -198,6 +199,7 @@
             timed: true,
             elapsedMs: 0,
             isRunning: false,
+            isCompleted: false,
           }
 
           this.localEvents.push(this.createEvent)

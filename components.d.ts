@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
+    AppHeader: typeof import('./src/components/AppHeader.vue')['default']
     DayEvents: typeof import('./src/components/DayEvents.vue')['default']
     EventCalendar: typeof import('./src/components/EventCalendar.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']

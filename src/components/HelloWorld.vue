@@ -279,6 +279,63 @@ export default {
         date.getHours(),
       )}:${pad(date.getMinutes())}`;
     },
+    addTask() {
+      this.tasks.push({
+        id: this.taskSeed,
+        title: `Новая задача #${this.taskSeed}`,
+        description: "",
+        elapsedMs: 0,
+        startedAt: null,
+        isRunning: false,
+      });
+      this.taskSeed += 1;
+    },
+    removeTask(id) {
+      this.tasks = this.tasks.filter((task) => task.id !== id);
+    },
+    toggleTimer(id) {
+      const task = this.tasks.find((item) => item.id === id);
+      if (!task) {
+        return;
+      }
+
+      if (task.isRunning) {
+        task.elapsedMs += this.now - task.startedAt;
+        task.startedAt = null;
+        task.isRunning = false;
+      } else {
+        task.startedAt = this.now;
+        task.isRunning = true;
+      }
+    },
+    resetTimer(id) {
+      const task = this.tasks.find((item) => item.id === id);
+      if (!task) {
+        return;
+      }
+
+      task.elapsedMs = 0;
+      task.startedAt = task.isRunning ? this.now : null;
+    },
+    getTaskDuration(task) {
+      if (!task.isRunning || !task.startedAt) {
+        return task.elapsedMs;
+      }
+
+      return task.elapsedMs + (this.now - task.startedAt);
+    },
+    formatDuration(duration) {
+      const totalSeconds = Math.floor(duration / 1000);
+      const hours = Math.floor(totalSeconds / 3600)
+        .toString()
+        .padStart(2, "0");
+      const minutes = Math.floor((totalSeconds % 3600) / 60)
+        .toString()
+        .padStart(2, "0");
+      const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+
+      return `${hours}:${minutes}:${seconds}`;
+    },
   },
 };
 </script>

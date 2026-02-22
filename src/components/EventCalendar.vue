@@ -345,9 +345,14 @@
       mouseMove (nativeEvent, tms) {
         const mouse = this.toTime(tms)
 
+        if (this.dragEvent && this.dragTime === null) {
+          this.dragTime = mouse - this.toTimestamp(this.dragEvent.start)
+          return
+        }
+
         if (this.dragEvent && this.dragTime !== null) {
-          const start = new Date(this.dragEvent.start).getTime()
-          const end = new Date(this.dragEvent.end).getTime()
+          const start = this.toTimestamp(this.dragEvent.start)
+          const end = this.toTimestamp(this.dragEvent.end)
           const duration = end - start
           const newStart = this.roundTime(mouse - this.dragTime)
 
@@ -391,6 +396,10 @@
       },
       toTime (tms) {
         return new Date(tms.year, tms.month - 1, tms.day, tms.hour, tms.minute).getTime()
+      },
+      toTimestamp (value) {
+        if (typeof value === 'number') return value
+        return new Date(value).getTime()
       },
       rndElement (arr) {
         return arr[this.rnd(0, arr.length - 1)]

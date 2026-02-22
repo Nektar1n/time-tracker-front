@@ -33,6 +33,7 @@
         :weekdays="weekday"
         @change="getEvents"
         @click:date="viewDay"
+        @click:event="openEditEvent"
         @mousedown:event="startDrag"
         @mousedown:time="startTime"
         @mouseleave="cancelDrag"
@@ -73,6 +74,23 @@
         </template>
       </v-calendar>
     </v-sheet>
+
+    <v-dialog v-model="isEditOpen" max-width="450">
+      <v-card>
+        <v-card-title>Редактирование задачи</v-card-title>
+        <v-card-text class="d-flex flex-column ga-3">
+          <v-text-field v-model="draftEvent.name" label="Название" />
+          <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
+          <v-select v-model="draftEvent.color" :items="colors" label="Цвет" />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
+          <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </div>
 </template>
 
@@ -111,6 +129,8 @@
       extendOriginal: null,
       suppressScrollEmit: false,
       scrollElement: null,
+      isEditOpen: false,
+      draftEvent: {},
     }),
     watch: {
       events: {
@@ -219,6 +239,22 @@
         if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
 
         return String(value).slice(0, 10)
+      },
+      openEditEvent (nativeEvent, payload) {
+        const event = payload?.event
+        if (!event) return
+
+        this.draftEvent = { ...event }
+        this.isEditOpen = true
+        nativeEvent.stopPropagation()
+      },
+      saveEvent () {
+        const idx = this.localEvents.findIndex(item => item.id === this.draftEvent.id)
+        if (idx !== -1) {
+          this.localEvents.splice(idx, 1, { ...this.draftEvent })
+          this.emitEvents()
+        }
+        this.isEditOpen = false
       },
       emitEvents () {
         this.$emit('update:events', this.localEvents.map(item => ({ ...item })))

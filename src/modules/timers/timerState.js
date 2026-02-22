@@ -4,7 +4,18 @@ const state = reactive({
   events: [],
   selectedDate: new Date(),
   scrollSync: null,
+  actionLogs: [],
 })
+
+const addActionLog = ({ eventId, eventName, action, at = Date.now() }) => {
+  state.actionLogs.unshift({
+    id: crypto.randomUUID(),
+    eventId,
+    eventName,
+    action,
+    at,
+  })
+}
 
 const pauseEvent = (event) => {
   if (!event?.isRunning) return event
@@ -29,6 +40,12 @@ const toggleTimerById = (eventId) => {
     : { ...current, timerStartedAt: Date.now(), isRunning: true }
 
   state.events.splice(idx, 1, updated)
+
+  addActionLog({
+    eventId: updated.id,
+    eventName: updated.name,
+    action: current.isRunning ? 'pause' : 'start',
+  })
 }
 
 const completeEventById = (eventId) => {
@@ -41,6 +58,12 @@ const completeEventById = (eventId) => {
   state.events.splice(idx, 1, {
     ...paused,
     isCompleted: true,
+  })
+
+  addActionLog({
+    eventId: current.id,
+    eventName: current.name,
+    action: 'complete',
   })
 }
 
@@ -78,4 +101,5 @@ export {
   toggleTimerById,
   completeEventById,
   updateEventById,
+  addActionLog,
 }

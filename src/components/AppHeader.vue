@@ -13,6 +13,7 @@
     >
       <v-tab value="home" to="/">Главная</v-tab>
       <v-tab value="active-timers" to="/active-timers">Активные таймеры</v-tab>
+      <v-tab value="statistics" to="/statistics">Статистика</v-tab>
     </v-tabs>
   </v-app-bar>
 </template>
@@ -22,7 +23,9 @@
     name: 'AppHeader',
     computed: {
       activeTab () {
-        return this.$route.path === '/active-timers' ? 'active-timers' : 'home'
+        if (this.$route.path === '/active-timers') return 'active-timers'
+        if (this.$route.path === '/statistics') return 'statistics'
+        return 'home'
       },
     },
   }

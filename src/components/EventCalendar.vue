@@ -82,6 +82,16 @@
           <v-text-field v-model="draftEvent.name" label="Название" />
           <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
           <v-select v-model="draftEvent.color" :items="colors" label="Цвет" />
+          <v-text-field
+            v-model="draftStartInput"
+            label="Начало"
+            type="datetime-local"
+          />
+          <v-text-field
+            v-model="draftEndInput"
+            label="Конец"
+            type="datetime-local"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -131,6 +141,8 @@
       scrollElement: null,
       isEditOpen: false,
       draftEvent: {},
+      draftStartInput: '',
+      draftEndInput: '',
     }),
     watch: {
       events: {
@@ -249,13 +261,22 @@
         if (!event) return
 
         this.draftEvent = { ...event }
+        this.draftStartInput = this.formatForDateTimeInput(event.start)
+        this.draftEndInput = this.formatForDateTimeInput(event.end)
         this.isEditOpen = true
         nativeEvent.stopPropagation()
       },
       saveEvent () {
         const idx = this.localEvents.findIndex(item => item.id === this.draftEvent.id)
         if (idx !== -1) {
-          this.localEvents.splice(idx, 1, { ...this.draftEvent })
+          const parsedStart = this.parseDateTimeInput(this.draftStartInput, this.draftEvent.start)
+          const parsedEnd = this.parseDateTimeInput(this.draftEndInput, this.draftEvent.end)
+
+          this.localEvents.splice(idx, 1, {
+            ...this.draftEvent,
+            start: parsedStart,
+            end: new Date(Math.max(parsedStart.getTime(), parsedEnd.getTime())),
+          })
           this.emitEvents()
         }
         this.isEditOpen = false
@@ -404,6 +425,18 @@
       toTimestamp (value) {
         if (typeof value === 'number') return value
         return new Date(value).getTime()
+      },
+      formatForDateTimeInput (value) {
+        const date = new Date(value)
+        if (Number.isNaN(date.getTime())) return ''
+
+        const pad = part => String(part).padStart(2, '0')
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+      },
+      parseDateTimeInput (value, fallback) {
+        const parsed = value ? new Date(value) : null
+        if (parsed && !Number.isNaN(parsed.getTime())) return parsed
+        return new Date(fallback)
       },
       rndElement (arr) {
         return arr[this.rnd(0, arr.length - 1)]

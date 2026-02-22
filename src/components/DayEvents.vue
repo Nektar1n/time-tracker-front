@@ -375,7 +375,7 @@ export default {
       const mouse = this.toTime(tms);
 
       if (this.dragEvent && this.dragTime === null) {
-        const start = this.dragEvent.start;
+        const start = this.toTimestamp(this.dragEvent.start);
 
         this.dragTime = mouse - start;
       } else {
@@ -404,9 +404,14 @@ export default {
     mouseMove(nativeEvent, tms) {
       const mouse = this.toTime(tms);
 
+      if (this.dragEvent && this.dragTime === null) {
+        this.dragTime = mouse - this.toTimestamp(this.dragEvent.start);
+        return;
+      }
+
       if (this.dragEvent && this.dragTime !== null) {
-        const start = this.dragEvent.start;
-        const end = this.dragEvent.end;
+        const start = this.toTimestamp(this.dragEvent.start);
+        const end = this.toTimestamp(this.dragEvent.end);
         const duration = end - start;
         const newStartTime = mouse - this.dragTime;
         const newStart = this.roundTime(newStartTime);
@@ -414,6 +419,7 @@ export default {
 
         this.dragEvent.start = newStart;
         this.dragEvent.end = newEnd;
+        this.emitEvents();
       } else if (this.createEvent && this.createStart !== null) {
         const mouseRounded = this.roundTime(mouse, false);
         const min = Math.min(mouseRounded, this.createStart);
@@ -421,6 +427,7 @@ export default {
 
         this.createEvent.start = min;
         this.createEvent.end = max;
+        this.emitEvents();
       }
     },
     endDrag() {
@@ -462,6 +469,10 @@ export default {
         tms.hour,
         tms.minute,
       ).getTime();
+    },
+    toTimestamp(value) {
+      if (typeof value === "number") return value;
+      return new Date(value).getTime();
     },
     getEventColor(event) {
       return event.color;

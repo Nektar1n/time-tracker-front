@@ -28,6 +28,12 @@
                 >
                   {{ event.details }}
                 </small>
+                <small
+                  v-if="categoryLabel(event)"
+                  class="running-event-details"
+                >
+                  {{ categoryLabel(event) }}
+                </small>
               </div>
             </div>
             <div class="d-flex align-center ga-1">
@@ -102,6 +108,7 @@
 </template>
 
 <script>
+  import { getCategoryById } from '@/modules/categories/categoryState'
   import {
     completeEventById,
     setAllEvents,
@@ -181,6 +188,10 @@
           return elapsed + (this.timerTick - event.timerStartedAt)
         }
         return elapsed
+      },
+      categoryLabel (event) {
+        const category = getCategoryById(event?.categoryId)
+        return category ? `${category.emoji} ${category.name}` : ''
       },
       formatElapsed (event) {
         const totalSeconds = Math.max(

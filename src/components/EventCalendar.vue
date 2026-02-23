@@ -98,6 +98,13 @@
             :items="colorOptions"
             label="Цвет"
           />
+          <v-select
+            v-model="draftEvent.categoryId"
+            item-title="title"
+            item-value="value"
+            :items="categoryOptions"
+            label="Категория"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -111,6 +118,8 @@
 </template>
 
 <script>
+  import { categoryOptions, state as categoryState } from '@/modules/categories/categoryState'
+
   export default {
     name: 'EventCalendar',
     props: {
@@ -156,6 +165,14 @@
       isEditOpen: false,
       draftEvent: {},
     }),
+    computed: {
+      categoryOptions () {
+        return categoryOptions.value
+      },
+      categories () {
+        return categoryState.categories
+      },
+    },
     watch: {
       events: {
         immediate: true,
@@ -344,6 +361,7 @@
             elapsedMs: 0,
             isRunning: false,
             isCompleted: false,
+            categoryId: this.rndElement(this.categories)?.id || null,
           })
         }
 
@@ -387,6 +405,7 @@
             elapsedMs: 0,
             isRunning: false,
             isCompleted: false,
+            categoryId: this.rndElement(this.categories)?.id || null,
           }
 
           this.localEvents.push(this.createEvent)

@@ -20,6 +20,7 @@ declare module 'vue-router/auto-routes' {
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/active-timers': RouteRecordInfo<'/active-timers', '/active-timers', Record<never, never>, Record<never, never>>,
+    '/dictionaries': RouteRecordInfo<'/dictionaries', '/dictionaries', Record<never, never>, Record<never, never>>,
     '/statistics': RouteRecordInfo<'/statistics', '/statistics', Record<never, never>, Record<never, never>>,
   }
 
@@ -40,6 +41,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/active-timers.vue': {
       routes: '/active-timers'
+      views: never
+    }
+    'src/pages/dictionaries.vue': {
+      routes: '/dictionaries'
       views: never
     }
     'src/pages/statistics.vue': {

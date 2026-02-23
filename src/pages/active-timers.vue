@@ -28,6 +28,7 @@
           </v-card-title>
           <v-card-text>
             <div class="text-body-2 mb-2">{{ event.details || 'Без описания' }}</div>
+            <div v-if="categoryLabel(event)" class="text-caption mb-2">{{ categoryLabel(event) }}</div>
             <div class="text-caption text-medium-emphasis">
               Старт: {{ formatDateTime(event.start) }}
             </div>
@@ -87,6 +88,13 @@
             :items="colorOptions"
             label="Цвет"
           />
+          <v-select
+            v-model="draftEvent.categoryId"
+            item-title="title"
+            item-value="value"
+            :items="categoryOptions"
+            label="Категория"
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -107,6 +115,7 @@
 </template>
 
 <script>
+  import { categoryOptions, getCategoryById } from '@/modules/categories/categoryState'
   import { completeEventById, state, toggleTimerById, updateEventById } from '@/modules/timers/timerState'
 
   export default {
@@ -129,6 +138,9 @@
       ],
     }),
     computed: {
+      categoryOptions () {
+        return categoryOptions.value
+      },
       activeEvents () {
         return state.events.filter(
           item => !item.isCompleted && (item.isRunning || (item.elapsedMs || 0) > 0),
@@ -168,6 +180,7 @@
           color: event.color || '#2196F3',
           start: event.start,
           end: event.end,
+          categoryId: event.categoryId || null,
           startInput: this.toDateTimeInput(event.start),
           endInput: this.toDateTimeInput(event.end),
         }
@@ -185,6 +198,7 @@
           color: this.draftEvent.color,
           start: validStart,
           end: Math.max(validEnd, validStart),
+          categoryId: this.draftEvent.categoryId || null,
         })
         this.isEditOpen = false
       },
@@ -212,6 +226,10 @@
         const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
         const s = String(totalSeconds % 60).padStart(2, '0')
         return `${h}:${m}:${s}`
+      },
+      categoryLabel (event) {
+        const category = getCategoryById(event?.categoryId)
+        return category ? `${category.emoji} ${category.name}` : ''
       },
       formatDateTime (value) {
         const date = new Date(value)

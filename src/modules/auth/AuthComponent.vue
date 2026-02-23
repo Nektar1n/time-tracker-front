@@ -19,8 +19,8 @@
             />
             <v-text-field
               v-model.trim="form['password'].value"
-              autocomplete="off"
               :append-icon="show ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
+              autocomplete="off"
               class="my-2"
               density="comfortable"
               :error-messages="form['password'].error"

@@ -21,5 +21,6 @@ declare module 'vue' {
     PersonalCabinet: typeof import('./src/components/PersonalCabinet.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RunningTimersPopup: typeof import('./src/components/RunningTimersPopup.vue')['default']
   }
 }

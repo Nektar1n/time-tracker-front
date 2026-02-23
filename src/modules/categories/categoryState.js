@@ -97,6 +97,14 @@ function addCategory ({ name, emoji }) {
   return true
 }
 
+const emojiOptions = computed(() => {
+  const emojis = [...new Set(defaultCategories.map(item => item.emoji))]
+  return emojis.map(emoji => ({
+    title: emoji,
+    value: emoji,
+  }))
+})
+
 const categoryOptions = computed(() =>
   state.categories.map(item => ({
     value: item.id,
@@ -113,6 +121,7 @@ loadCategories()
 export {
   addCategory,
   categoryOptions,
+  emojiOptions,
   getCategoryById,
   state,
 }

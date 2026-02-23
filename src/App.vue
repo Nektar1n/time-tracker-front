@@ -1,6 +1,7 @@
 <template>
   <v-app>
     <app-header />
+    <running-timers-popup />
     <v-main>
       <router-view />
     </v-main>
@@ -9,10 +10,11 @@
 
 <script>
   import AppHeader from './components/AppHeader.vue'
+  import RunningTimersPopup from './components/RunningTimersPopup.vue'
 
   export default {
     name: 'App',
-    components: { AppHeader },
+    components: { AppHeader, RunningTimersPopup },
   }
 </script>
 

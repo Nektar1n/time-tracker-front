@@ -14,7 +14,7 @@
       <v-tab to="/" value="home">Главная</v-tab>
       <v-tab to="/active-timers" value="active-timers">Активные таймеры</v-tab>
       <v-tab to="/statistics" value="statistics">Статистика</v-tab>
-      <v-tab to="/dictionaries" value="dictionaries">Справочники</v-tab>
+      <v-tab to="/dictionaries" value="dictionaries">Категории</v-tab>
     </v-tabs>
 
     <v-menu :close-on-content-click="false" location="bottom end" min-width="640">

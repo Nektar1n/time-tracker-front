@@ -1,9 +1,9 @@
 <template>
   <v-container class="py-6" max-width="900">
-    <h2 class="mb-4">Справочники</h2>
+    <h2 class="mb-4">Категории</h2>
 
     <v-card rounded="lg">
-      <v-card-title>Справочник категорий</v-card-title>
+      <v-card-title>Категории</v-card-title>
       <v-card-text>
         <v-form class="d-flex flex-wrap align-end ga-3 mb-4" @submit.prevent="onAddCategory">
           <v-text-field
@@ -13,11 +13,13 @@
             minlength="2"
             required
           />
-          <v-text-field
+          <v-select
             v-model="form.emoji"
             class="emoji-input"
+            item-title="title"
+            item-value="value"
+            :items="emojiOptions"
             label="Эмодзи"
-            maxlength="4"
             required
           />
           <v-btn color="primary" type="submit">Добавить</v-btn>
@@ -50,7 +52,7 @@
 </template>
 
 <script>
-  import { addCategory, state } from '@/modules/categories/categoryState'
+  import { addCategory, emojiOptions, state } from '@/modules/categories/categoryState'
 
   export default {
     name: 'DictionariesPage',
@@ -64,6 +66,9 @@
     computed: {
       categories () {
         return state.categories
+      },
+      emojiOptions () {
+        return emojiOptions.value
       },
     },
     methods: {

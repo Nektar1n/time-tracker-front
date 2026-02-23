@@ -15,17 +15,57 @@
       <v-tab to="/active-timers" value="active-timers">Активные таймеры</v-tab>
       <v-tab to="/statistics" value="statistics">Статистика</v-tab>
     </v-tabs>
+
+    <v-menu location="bottom end" :close-on-content-click="false" min-width="640">
+      <template #activator="{ props }">
+        <v-btn
+          class="ml-3"
+          color="primary"
+          prepend-icon="mdi-account-group"
+          variant="outlined"
+          v-bind="props"
+        >
+          Совместный календарь
+        </v-btn>
+      </template>
+
+      <v-sheet class="pa-3" rounded="lg" width="640">
+        <v-row>
+          <v-col cols="12" md="7">
+            <personal-cabinet @users-update="onUsersUpdate" />
+          </v-col>
+          <v-col cols="12" md="5">
+            <connected-users-list :users="connectedUsers" />
+          </v-col>
+        </v-row>
+      </v-sheet>
+    </v-menu>
   </v-app-bar>
 </template>
 
 <script>
+  import ConnectedUsersList from './ConnectedUsersList.vue'
+  import PersonalCabinet from './PersonalCabinet.vue'
+
   export default {
     name: 'AppHeader',
+    components: {
+      ConnectedUsersList,
+      PersonalCabinet,
+    },
+    data: () => ({
+      connectedUsers: [],
+    }),
     computed: {
       activeTab () {
         if (this.$route.path === '/active-timers') return 'active-timers'
         if (this.$route.path === '/statistics') return 'statistics'
         return 'home'
+      },
+    },
+    methods: {
+      onUsersUpdate (users) {
+        this.connectedUsers = users
       },
     },
   }

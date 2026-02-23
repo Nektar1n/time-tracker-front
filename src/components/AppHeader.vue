@@ -14,9 +14,10 @@
       <v-tab to="/" value="home">Главная</v-tab>
       <v-tab to="/active-timers" value="active-timers">Активные таймеры</v-tab>
       <v-tab to="/statistics" value="statistics">Статистика</v-tab>
+      <v-tab to="/dictionaries" value="dictionaries">Справочники</v-tab>
     </v-tabs>
 
-    <v-menu location="bottom end" :close-on-content-click="false" min-width="640">
+    <v-menu :close-on-content-click="false" location="bottom end" min-width="640">
       <template #activator="{ props }">
         <v-btn
           class="ml-3"
@@ -60,6 +61,7 @@
       activeTab () {
         if (this.$route.path === '/active-timers') return 'active-timers'
         if (this.$route.path === '/statistics') return 'statistics'
+        if (this.$route.path === '/dictionaries') return 'dictionaries'
         return 'home'
       },
     },

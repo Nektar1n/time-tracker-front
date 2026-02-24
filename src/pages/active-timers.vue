@@ -116,6 +116,7 @@
 
 <script>
   import { categoryOptions, getCategoryById } from '@/modules/categories/categoryState'
+  import { formatDateTimeValue, timeFormatMode } from '@/modules/preferences/timeFormatState'
   import { completeEventById, state, toggleTimerById, updateEventById } from '@/modules/timers/timerState'
 
   export default {
@@ -138,6 +139,9 @@
       ],
     }),
     computed: {
+      currentTimeFormatMode () {
+        return timeFormatMode.value
+      },
       categoryOptions () {
         return categoryOptions.value
       },
@@ -232,8 +236,7 @@
         return category ? `${category.emoji} ${category.name}` : ''
       },
       formatDateTime (value) {
-        const date = new Date(value)
-        return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+        return formatDateTimeValue(value, this.currentTimeFormatMode)
       },
     },
   }

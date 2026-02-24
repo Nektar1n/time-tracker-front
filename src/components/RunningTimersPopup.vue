@@ -21,22 +21,36 @@
           />
           <div class="running-event-text">
             <span class="font-weight-medium running-event-title">{{ event.name }}</span>
-            <small
-              v-if="event.details"
-              class="running-event-details"
-            >
-              {{ event.details }}
-            </small>
-            <small
-              v-if="categoryLabel(event)"
-              class="running-event-details"
-            >
-              {{ categoryLabel(event) }}
-            </small>
+            <transition name="timer-details-expand">
+              <div
+                v-if="!isCollapsed(event.id)"
+                class="running-event-details-wrap"
+              >
+                <small
+                  v-if="event.details"
+                  class="running-event-details"
+                >
+                  {{ event.details }}
+                </small>
+                <small
+                  v-if="categoryLabel(event)"
+                  class="running-event-details"
+                >
+                  {{ categoryLabel(event) }}
+                </small>
+              </div>
+            </transition>
           </div>
         </div>
 
         <div class="d-flex align-center ga-1 running-event-controls">
+          <v-btn
+            :icon="isCollapsed(event.id) ? 'mdi-chevron-down' : 'mdi-chevron-up'"
+            size="x-small"
+            :title="isCollapsed(event.id) ? 'Развернуть таймер' : 'Свернуть таймер'"
+            variant="text"
+            @click.stop="toggleCollapse(event.id)"
+          />
           <v-btn
             :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
             size="x-small"
@@ -74,6 +88,7 @@
       timerTick: Date.now(),
       ticker: null,
       pendingCompletion: {},
+      collapsedEvents: {},
     }),
     computed: {
       events () {
@@ -88,6 +103,17 @@
         return this.$route.path !== '/active-timers' && this.activeEvents.length > 0
       },
     },
+    watch: {
+      activeEvents: {
+        deep: true,
+        handler (value) {
+          const activeIds = new Set(value.map(item => item.id))
+          this.collapsedEvents = Object.fromEntries(
+            Object.entries(this.collapsedEvents).filter(([id]) => activeIds.has(Number(id))),
+          )
+        },
+      },
+    },
     mounted () {
       this.ticker = setInterval(() => {
         this.timerTick = Date.now()
@@ -99,6 +125,15 @@
     methods: {
       openEvent () {
         this.$router.push('/active-timers')
+      },
+      toggleCollapse (eventId) {
+        this.collapsedEvents = {
+          ...this.collapsedEvents,
+          [eventId]: !this.collapsedEvents[eventId],
+        }
+      },
+      isCollapsed (eventId) {
+        return Boolean(this.collapsedEvents[eventId])
       },
       toggleTimer (eventId) {
         toggleTimerById(eventId)
@@ -140,7 +175,7 @@
 <style scoped>
 .running-timer-popup-list {
   position: fixed;
-  top: calc(var(--v-layout-top) + 8px);
+  top: calc(var(--v-layout-top, 64px) + 12px);
   right: 16px;
   z-index: 120;
   width: min(420px, calc(100vw - 32px));
@@ -186,6 +221,12 @@
   text-overflow: ellipsis;
 }
 
+.running-event-details-wrap {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .running-event-details {
   color: rgb(var(--v-theme-on-surface-variant));
 }
@@ -207,6 +248,19 @@
   letter-spacing: 0.4px;
   min-width: 78px;
   text-align: right;
+}
+
+.timer-details-expand-enter-active,
+.timer-details-expand-leave-active {
+  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.18s ease;
+  max-height: 50px;
+}
+
+.timer-details-expand-enter-from,
+.timer-details-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 .active-timers-pop-enter-active,

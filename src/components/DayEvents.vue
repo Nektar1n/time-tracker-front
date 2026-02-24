@@ -575,6 +575,8 @@
 .event-category {
   font-size: 11px;
   background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgb(var(--v-theme-surface-variant));
   border-radius: 10px;
   padding: 1px 6px;
 }

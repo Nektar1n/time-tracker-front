@@ -15,6 +15,7 @@ declare module 'vue' {
     AppHeader: typeof import('./src/components/AppHeader.vue')['default']
     ConnectedUsersList: typeof import('./src/components/ConnectedUsersList.vue')['default']
     DayEvents: typeof import('./src/components/DayEvents.vue')['default']
+    DaySketchPad: typeof import('./src/components/DaySketchPad.vue')['default']
     EventCalendar: typeof import('./src/components/EventCalendar.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     MainCalendar: typeof import('./src/components/MainCalendar.vue')['default']

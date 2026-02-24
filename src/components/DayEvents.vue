@@ -1,84 +1,87 @@
 <template>
   <div>
-    <v-card class="mb-3" rounded="lg" variant="tonal">
-      <v-card-text>
-        <v-btn-toggle
-          v-model="activeView"
-          color="primary"
-          density="comfortable"
-          divided
-          mandatory
-        >
-          <v-btn prepend-icon="mdi-calendar-clock" value="events">События</v-btn>
-          <v-btn prepend-icon="mdi-pencil" value="drawing">Рисование</v-btn>
-        </v-btn-toggle>
-      </v-card-text>
-    </v-card>
-
-    <v-sheet v-if="activeView === 'events'" height="700">
-      <v-calendar
-        ref="calendar"
-        v-model="focus"
-        :event-color="getEventColor"
-        :event-ripple="false"
-        :events="dayEvents"
-        type="day"
-        @mousedown:event="startDrag"
-        @mousedown:time="startTime"
-        @mouseleave="cancelDrag"
-        @mousemove:time="mouseMove"
-        @mouseup:time="endDrag"
+    <div class="d-flex align-center justify-space-between mb-3">
+      <div class="text-subtitle-1 font-weight-medium">
+        Неделя {{ weekNumber }}, {{ formattedDate }}
+      </div>
+      <v-btn
+        :color="isDrawingEnabled ? 'primary' : undefined"
+        :prepend-icon="isDrawingEnabled ? 'mdi-pencil-off' : 'mdi-pencil'"
+        size="small"
+        :variant="isDrawingEnabled ? 'flat' : 'tonal'"
+        @click="isDrawingEnabled = !isDrawingEnabled"
       >
-        <template #event="{ event, timed, eventSummary }">
-          <div class="v-event-draggable d-flex align-center ga-1">
-            <span v-if="categoryLabel(event)" class="event-category">{{
-              categoryLabel(event)
-            }}</span>
-            <v-btn
-              :disabled="event.isCompleted"
-              icon
-              size="x-small"
-              variant="text"
-              @click.stop="toggleTimer(event)"
-            >
-              <v-icon size="14">{{
-                event.isRunning ? "mdi-pause" : "mdi-play"
-              }}</v-icon>
-            </v-btn>
-            <v-btn
-              icon
-              size="x-small"
-              variant="text"
-              @click.stop="completeTask(event)"
-            >
-              <v-icon
-                :color="event.isCompleted ? 'success' : undefined"
-                size="14"
+        {{ isDrawingEnabled ? 'Выключить рисование' : 'Рисовать поверх дня' }}
+      </v-btn>
+    </div>
+
+    <div class="day-events-stage">
+      <v-sheet height="700">
+        <v-calendar
+          ref="calendar"
+          v-model="focus"
+          :event-color="getEventColor"
+          :event-ripple="false"
+          :events="dayEvents"
+          type="day"
+          @mousedown:event="startDrag"
+          @mousedown:time="startTime"
+          @mouseleave="cancelDrag"
+          @mousemove:time="mouseMove"
+          @mouseup:time="endDrag"
+        >
+          <template #event="{ event, timed, eventSummary }">
+            <div class="v-event-draggable d-flex align-center ga-1">
+              <span v-if="categoryLabel(event)" class="event-category">{{
+                categoryLabel(event)
+              }}</span>
+              <v-btn
+                :disabled="event.isCompleted"
+                icon
+                size="x-small"
+                variant="text"
+                @click.stop="toggleTimer(event)"
               >
-                {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
-              </v-icon>
-            </v-btn>
-            <v-btn
-              draggable="true"
-              icon
-              size="x-small"
-              title="Перенести в левый календарь"
-              variant="text"
-              @click="openEditEventById(event.id)"
-            >
-              <v-icon size="14">mdi-drag</v-icon>
-            </v-btn>
-            <component :is="eventSummary" />
-            <small class="event-timer">{{ formatElapsed(event) }}</small>
-          </div>
-          <div
-            v-if="timed"
-            class="v-event-drag-bottom"
-            @mousedown.stop="extendBottom(event)"
-          />
-        </template>
-      </v-calendar>
-    </v-sheet>
+                <v-icon size="14">{{
+                  event.isRunning ? "mdi-pause" : "mdi-play"
+                }}</v-icon>
+              </v-btn>
+              <v-btn
+                icon
+                size="x-small"
+                variant="text"
+                @click.stop="completeTask(event)"
+              >
+                <v-icon
+                  :color="event.isCompleted ? 'success' : undefined"
+                  size="14"
+                >
+                  {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
+                </v-icon>
+              </v-btn>
+              <v-btn
+                draggable="true"
+                icon
+                size="x-small"
+                title="Перенести в левый календарь"
+                variant="text"
+                @click="openEditEventById(event.id)"
+              >
+                <v-icon size="14">mdi-drag</v-icon>
+              </v-btn>
+              <component :is="eventSummary" />
+              <small class="event-timer">{{ formatElapsed(event) }}</small>
+            </div>
+            <div
+              v-if="timed"
+              class="v-event-drag-bottom"
+              @mousedown.stop="extendBottom(event)"
+            />
+          </template>
+        </v-calendar>
+      </v-sheet>
+      <day-sketch-pad :is-enabled="isDrawingEnabled" :selected-date="focus" />
+    </div>
 
     <day-sketch-pad v-else :selected-date="focus" />
 
@@ -186,9 +189,29 @@
       draftEvent: {},
       suppressScrollEmit: false,
       scrollElement: null,
-      activeView: 'events',
+      isDrawingEnabled: false,
     }),
     computed: {
+      formattedDate () {
+        const date = new Date(this.focus || this.selectedDate)
+        if (Number.isNaN(date.getTime())) return ''
+
+        return date.toLocaleDateString('ru-RU', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })
+      },
+      weekNumber () {
+        const date = new Date(this.focus || this.selectedDate)
+        if (Number.isNaN(date.getTime())) return ''
+
+        const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+        const dayNum = tmp.getUTCDay() || 7
+        tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum)
+        const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1))
+        return Math.ceil((((tmp - yearStart) / 86_400_000) + 1) / 7)
+      },
       categoryOptions () {
         return categoryOptions.value
       },
@@ -290,7 +313,6 @@
         )
       },
       onInternalScroll (event) {
-        if (this.activeView !== 'events') return
         if (this.suppressScrollEmit) return
         this.$emit('sync-scroll', {
           source: 'day-events',
@@ -592,6 +614,10 @@
 </script>
 
 <style scoped>
+.day-events-stage {
+  position: relative;
+}
+
 .v-event-draggable {
   padding-left: 6px;
 }

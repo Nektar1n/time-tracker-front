@@ -573,10 +573,11 @@ export default {
   padding-left: 6px;
 }
 
-.v-event-timed {
+:deep(.v-event-timed),
+:deep(.v-event:not(.v-event-timed)) {
   user-select: none;
   -webkit-user-select: none;
-  min-height: 500px;
+  min-height: 50px;
 }
 
 .event-category {

@@ -27,6 +27,7 @@ function pauseEvent (event) {
     elapsedMs: (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt),
     timerStartedAt: null,
     isRunning: false,
+    wasPaused: true,
   }
 }
 
@@ -43,7 +44,7 @@ function toggleTimerById (eventId) {
 
   const updated = current.isRunning
     ? pauseEvent(current)
-    : { ...current, timerStartedAt: Date.now(), isRunning: true }
+    : { ...current, timerStartedAt: Date.now(), isRunning: true, wasPaused: false }
 
   state.events.splice(idx, 1, updated)
 

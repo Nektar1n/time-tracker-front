@@ -40,6 +40,19 @@
         @mousemove:time="mouseMove"
         @mouseup:time="endDrag"
       >
+        <template #event="{ event, eventSummary }">
+          <div class="calendar-event-content">
+            <component :is="eventSummary" />
+            <span
+              v-if="eventStatusIcon(event)"
+              class="calendar-event-status-icon"
+              :class="`calendar-event-status-icon--${eventStatusIcon(event)}`"
+              :title="eventStatusLabel(event)"
+            >
+              <v-icon size="10">{{ eventStatusGlyph(event) }}</v-icon>
+            </span>
+          </div>
+        </template>
         <template #day-label="{ day, date }">
           <div class="pa-1">
             <v-btn
@@ -362,6 +375,7 @@
             isRunning: false,
             isCompleted: false,
             categoryId: this.rndElement(this.categories)?.id || null,
+            wasPaused: false,
           })
         }
 
@@ -371,6 +385,26 @@
       },
       getEventColor (event) {
         return event.color
+      },
+      eventStatusIcon (event) {
+        if (event?.isCompleted) return 'completed'
+        if (event?.isRunning) return 'running'
+        if (event?.wasPaused) return 'paused'
+        return null
+      },
+      eventStatusLabel (event) {
+        const status = this.eventStatusIcon(event)
+        if (status === 'completed') return 'Завершено'
+        if (status === 'running') return 'В работе'
+        if (status === 'paused') return 'На паузе'
+        return ''
+      },
+      eventStatusGlyph (event) {
+        const status = this.eventStatusIcon(event)
+        if (status === 'completed') return 'mdi-check'
+        if (status === 'running') return 'mdi-play'
+        if (status === 'paused') return 'mdi-pause'
+        return ''
       },
       prev () {
         this.$refs.calendar.prev()
@@ -389,6 +423,7 @@
       },
       startTime (nativeEvent, tms) {
         const mouse = this.toTime(tms)
+        const minimumDuration = 30 * 60 * 1000
 
         if (this.dragEvent && this.dragTime === null) {
           this.dragTime = mouse - new Date(this.dragEvent.start).getTime()
@@ -400,12 +435,13 @@
             details: '',
             color: this.rndElement(this.colorOptions).value,
             start: new Date(this.createStart),
-            end: new Date(this.createStart),
+            end: new Date(this.createStart + minimumDuration),
             timed: true,
             elapsedMs: 0,
             isRunning: false,
             isCompleted: false,
             categoryId: this.rndElement(this.categories)?.id || null,
+            wasPaused: false,
           }
 
           this.localEvents.push(this.createEvent)
@@ -513,4 +549,38 @@
   .calendar-day-btn--active :deep(*) {
     color: rgb(var(--v-theme-on-primary));
   }
+
+  .calendar-event-content {
+    position: relative;
+    min-height: 100%;
+    padding-right: 14px;
+  }
+
+  .calendar-event-status-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .calendar-event-status-icon--running {
+    background: rgb(var(--v-theme-success));
+    color: rgb(var(--v-theme-on-success));
+  }
+
+  .calendar-event-status-icon--paused {
+    background: rgb(var(--v-theme-warning));
+    color: rgb(var(--v-theme-on-warning));
+  }
+
+  .calendar-event-status-icon--completed {
+    background: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary));
+  }
+
 </style>

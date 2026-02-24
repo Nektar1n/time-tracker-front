@@ -573,7 +573,8 @@ export default {
   padding-left: 6px;
 }
 
-:deep(.v-event-timed) {
+:deep(.v-event-timed),
+:deep(.v-event:not(.v-event-timed)) {
   user-select: none;
   -webkit-user-select: none;
   min-height: 50px;

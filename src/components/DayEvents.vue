@@ -577,6 +577,9 @@
               this.emitEvents()
             }
           }
+
+          this.localEvents.push(this.createEvent)
+          this.emitEvents()
         }
 
         this.createEvent = null

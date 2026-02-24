@@ -7,6 +7,7 @@
         :event-color="getEventColor"
         :event-ripple="false"
         :events="dayEvents"
+        :interval-format="intervalFormat"
         type="day"
         @mousedown:event="startDrag"
         @mousedown:time="startTime"
@@ -117,6 +118,7 @@
 
 <script>
   import { categoryOptions, state as categoryState, getCategoryById } from '@/modules/categories/categoryState'
+  import { timeFormatMode } from '@/modules/preferences/timeFormatState'
   import { addActionLog } from '@/modules/timers/timerState'
 
   export default {
@@ -161,6 +163,9 @@
       scrollElement: null,
     }),
     computed: {
+      useAmPm () {
+        return timeFormatMode.value === '12h'
+      },
       categoryOptions () {
         return categoryOptions.value
       },
@@ -541,6 +546,26 @@
       getEventColor (event) {
         return event.color
       },
+      intervalFormat (interval) {
+        if (typeof interval?.hour === 'number') {
+          const intervalDate = new Date()
+          intervalDate.setHours(interval.hour, interval.minute || 0, 0, 0)
+          return intervalDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: this.useAmPm,
+          })
+        }
+
+        const parsedDate = new Date(interval?.date || interval)
+        if (Number.isNaN(parsedDate.getTime())) return ''
+
+        return parsedDate.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: this.useAmPm,
+        })
+      },
       toDateTimeInput (value) {
         const date = new Date(value)
         if (Number.isNaN(date.getTime())) return ''
@@ -575,6 +600,8 @@
 .event-category {
   font-size: 11px;
   background: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgb(var(--v-theme-surface-variant));
   border-radius: 10px;
   padding: 1px 6px;
 }

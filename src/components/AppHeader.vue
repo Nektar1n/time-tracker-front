@@ -17,6 +17,19 @@
       <v-tab to="/dictionaries" value="dictionaries">Категории</v-tab>
     </v-tabs>
 
+    <v-btn-toggle
+      class="ml-2"
+      color="primary"
+      density="comfortable"
+      divided
+      mandatory
+      :model-value="timeFormatMode"
+      @update:model-value="setTimeFormatMode"
+    >
+      <v-btn value="12h">12ч</v-btn>
+      <v-btn value="24h">24ч</v-btn>
+    </v-btn-toggle>
+
     <v-menu :close-on-content-click="false" location="bottom end" min-width="640">
       <template #activator="{ props }">
         <v-btn
@@ -45,6 +58,7 @@
 </template>
 
 <script>
+  import { setTimeFormatMode, timeFormatMode } from '@/modules/preferences/timeFormatState'
   import ConnectedUsersList from './ConnectedUsersList.vue'
   import PersonalCabinet from './PersonalCabinet.vue'
 
@@ -58,6 +72,9 @@
       connectedUsers: [],
     }),
     computed: {
+      timeFormatMode () {
+        return timeFormatMode.value
+      },
       activeTab () {
         if (this.$route.path === '/active-timers') return 'active-timers'
         if (this.$route.path === '/statistics') return 'statistics'
@@ -66,6 +83,7 @@
       },
     },
     methods: {
+      setTimeFormatMode,
       onUsersUpdate (users) {
         this.connectedUsers = users
       },

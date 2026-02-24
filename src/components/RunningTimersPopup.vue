@@ -1,67 +1,81 @@
 <template>
-  <transition-group
-    v-if="isVisible"
-    class="running-timer-popup-list"
-    name="active-timers-pop"
-    tag="div"
-  >
-    <v-sheet
-      v-for="event in activeEvents"
-      :key="event.id"
-      class="running-timer-popup px-3 py-2"
-      color="surface"
-      rounded="lg"
-      @click="openEvent(event.id)"
+  <div v-if="isVisible" class="running-timer-popup-list">
+    <v-btn
+      class="running-timer-collapse-btn"
+      color="primary"
+      :prepend-icon="arePopupsCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up'"
+      size="small"
+      variant="elevated"
+      @click.stop="togglePopups"
     >
-      <div class="running-event-content">
-        <div class="d-flex align-center ga-2 running-event-main">
-          <span
-            class="running-event-dot"
-            :style="{ backgroundColor: event.color || '#2196F3' }"
-          />
-          <div class="running-event-text">
-            <span class="font-weight-medium running-event-title">{{ event.name }}</span>
-            <small
-              v-if="event.details"
-              class="running-event-details"
-            >
-              {{ event.details }}
-            </small>
-            <small
-              v-if="categoryLabel(event)"
-              class="running-event-details"
-            >
-              {{ categoryLabel(event) }}
-            </small>
-          </div>
-        </div>
+      {{ arePopupsCollapsed ? 'Показать таймеры' : 'Скрыть таймеры' }}
+    </v-btn>
 
-        <div class="d-flex align-center ga-1 running-event-controls">
-          <v-btn
-            :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
-            size="x-small"
-            :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
-            variant="text"
-            @click.stop="toggleTimer(event.id)"
-          />
-          <v-btn
-            color="success"
-            icon="mdi-check"
-            size="x-small"
-            title="Завершить событие"
-            variant="text"
-            @click.stop="completeEvent(event.id)"
-          />
-          <div
-            class="running-timer-value"
-            :style="{ color: event.color || '#2196F3' }"
-          >
-            {{ formatElapsed(event) }}
+    <transition-group
+      v-if="!arePopupsCollapsed"
+      name="active-timers-pop"
+      tag="div"
+    >
+      <v-sheet
+        v-for="event in activeEvents"
+        :key="event.id"
+        class="running-timer-popup px-3 py-2"
+        color="surface"
+        rounded="lg"
+        @click="openEvent(event.id)"
+      >
+        <div class="running-event-content">
+          <div class="d-flex align-center ga-2 running-event-main">
+            <span
+              class="running-event-dot"
+              :style="{ backgroundColor: event.color || '#2196F3' }"
+            />
+            <div class="running-event-text">
+              <span class="font-weight-medium running-event-title">{{ event.name }}</span>
+              <div class="running-event-details-wrap">
+                <small
+                  v-if="event.details"
+                  class="running-event-details"
+                >
+                  {{ event.details }}
+                </small>
+                <small
+                  v-if="categoryLabel(event)"
+                  class="running-event-details"
+                >
+                  {{ categoryLabel(event) }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex align-center ga-1 running-event-controls">
+            <v-btn
+              :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
+              size="x-small"
+              :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
+              variant="text"
+              @click.stop="toggleTimer(event.id)"
+            />
+            <v-btn
+              color="success"
+              icon="mdi-check"
+              size="x-small"
+              title="Завершить событие"
+              variant="text"
+              @click.stop="completeEvent(event.id)"
+            />
+            <div
+              class="running-timer-value"
+              :style="{ color: event.color || '#2196F3' }"
+            >
+              {{ formatElapsed(event) }}
+            </div>
           </div>
         </div>
-      </div>
-    </v-sheet>
-  </transition-group>
+      </v-sheet>
+    </transition-group>
+  </div>
 </template>
 
 <script>
@@ -74,6 +88,7 @@
       timerTick: Date.now(),
       ticker: null,
       pendingCompletion: {},
+      arePopupsCollapsed: false,
     }),
     computed: {
       events () {
@@ -99,6 +114,9 @@
     methods: {
       openEvent () {
         this.$router.push('/active-timers')
+      },
+      togglePopups () {
+        this.arePopupsCollapsed = !this.arePopupsCollapsed
       },
       toggleTimer (eventId) {
         toggleTimerById(eventId)
@@ -140,13 +158,17 @@
 <style scoped>
 .running-timer-popup-list {
   position: fixed;
-  top: calc(var(--v-layout-top) + 8px);
+  top: calc(var(--v-layout-top, 64px) + 12px);
   right: 16px;
   z-index: 120;
   width: min(420px, calc(100vw - 32px));
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.running-timer-collapse-btn {
+  align-self: flex-end;
 }
 
 .running-timer-popup {
@@ -184,6 +206,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.running-event-details-wrap {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .running-event-details {

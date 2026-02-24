@@ -29,6 +29,7 @@
         :event-overlap-mode="mode"
         :event-overlap-threshold="30"
         :events="localEvents"
+        :interval-format="intervalFormat"
         :type="type"
         :weekdays="weekday"
         @change="getEvents"
@@ -132,6 +133,7 @@
 
 <script>
   import { categoryOptions, state as categoryState } from '@/modules/categories/categoryState'
+  import { timeFormatMode } from '@/modules/preferences/timeFormatState'
 
   export default {
     name: 'EventCalendar',
@@ -179,6 +181,9 @@
       draftEvent: {},
     }),
     computed: {
+      useAmPm () {
+        return timeFormatMode.value === '12h'
+      },
       categoryOptions () {
         return categoryOptions.value
       },
@@ -385,6 +390,26 @@
       },
       getEventColor (event) {
         return event.color
+      },
+      intervalFormat (interval) {
+        if (typeof interval?.hour === 'number') {
+          const intervalDate = new Date()
+          intervalDate.setHours(interval.hour, interval.minute || 0, 0, 0)
+          return intervalDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: this.useAmPm,
+          })
+        }
+
+        const parsedDate = new Date(interval?.date || interval)
+        if (Number.isNaN(parsedDate.getTime())) return ''
+
+        return parsedDate.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: this.useAmPm,
+        })
       },
       eventStatusIcon (event) {
         if (event?.isCompleted) return 'completed'

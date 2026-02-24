@@ -343,6 +343,7 @@
           = (event.elapsedMs || 0) + (Date.now() - event.timerStartedAt)
         event.timerStartedAt = null
         event.isRunning = false
+        event.wasPaused = true
       },
       toggleTimer (event) {
         const idx = this.localEvents.findIndex(item => item.id === event.id)
@@ -356,6 +357,7 @@
         } else {
           current.timerStartedAt = Date.now()
           current.isRunning = true
+          current.wasPaused = false
         }
 
         this.localEvents.splice(idx, 1, current)
@@ -432,6 +434,7 @@
       },
       startTime (nativeEvent, tms) {
         const mouse = this.toTime(tms)
+        const minimumDuration = 30 * 60 * 1000
 
         if (this.dragEvent && this.dragTime === null) {
           const start = this.toTimestamp(this.dragEvent.start)
@@ -444,12 +447,13 @@
             name: `Event #${this.events.length}`,
             color: this.rndElement(this.colorOptions).value,
             start: this.createStart,
-            end: this.createStart,
+            end: this.createStart + minimumDuration,
             timed: true,
             elapsedMs: 0,
             isRunning: false,
             isCompleted: false,
             categoryId: this.rndElement(this.categories)?.id || null,
+            wasPaused: false,
           }
 
           this.localEvents.push(this.createEvent)

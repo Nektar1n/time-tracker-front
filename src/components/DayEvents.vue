@@ -83,6 +83,8 @@
       <day-sketch-pad :is-enabled="isDrawingEnabled" :selected-date="focus" />
     </div>
 
+    <day-sketch-pad v-else :selected-date="focus" />
+
     <v-dialog v-model="isEditOpen" max-width="450">
       <v-card>
         <v-card-title>Редактирование задачи</v-card-title>

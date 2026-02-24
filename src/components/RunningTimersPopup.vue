@@ -1,67 +1,93 @@
 <template>
-  <transition-group
+  <div
     v-if="isVisible"
-    class="running-timer-popup-list"
-    name="active-timers-pop"
-    tag="div"
+    class="running-timer-popup-wrapper"
   >
     <v-sheet
-      v-for="event in activeEvents"
-      :key="event.id"
-      class="running-timer-popup px-3 py-2"
+      class="running-timer-popup-toggle px-3 py-2"
       color="surface"
       rounded="lg"
-      @click="openEvent(event.id)"
+      @click="toggleList"
     >
-      <div class="running-event-content">
-        <div class="d-flex align-center ga-2 running-event-main">
-          <span
-            class="running-event-dot"
-            :style="{ backgroundColor: event.color || '#2196F3' }"
-          />
-          <div class="running-event-text">
-            <span class="font-weight-medium running-event-title">{{ event.name }}</span>
-            <small
-              v-if="event.details"
-              class="running-event-details"
-            >
-              {{ event.details }}
-            </small>
-            <small
-              v-if="categoryLabel(event)"
-              class="running-event-details"
-            >
-              {{ categoryLabel(event) }}
-            </small>
-          </div>
+      <div class="d-flex align-center justify-space-between ga-2">
+        <div class="d-flex align-center ga-2">
+          <v-icon color="primary" icon="mdi-timer-outline" size="18" />
+          <span class="font-weight-medium">Активные таймеры: {{ activeEvents.length }}</span>
         </div>
-
-        <div class="d-flex align-center ga-1 running-event-controls">
-          <v-btn
-            :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
-            size="x-small"
-            :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
-            variant="text"
-            @click.stop="toggleTimer(event.id)"
-          />
-          <v-btn
-            color="success"
-            icon="mdi-check"
-            size="x-small"
-            title="Завершить событие"
-            variant="text"
-            @click.stop="completeEvent(event.id)"
-          />
-          <div
-            class="running-timer-value"
-            :style="{ color: event.color || '#2196F3' }"
-          >
-            {{ formatElapsed(event) }}
-          </div>
-        </div>
+        <v-icon
+          :icon="isCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up'"
+          size="20"
+        />
       </div>
     </v-sheet>
-  </transition-group>
+
+    <transition name="active-timers-collapse">
+      <div v-if="!isCollapsed">
+        <transition-group
+          class="running-timer-popup-list"
+          name="active-timers-pop"
+          tag="div"
+        >
+          <v-sheet
+            v-for="event in activeEvents"
+            :key="event.id"
+            class="running-timer-popup px-3 py-2"
+            color="surface"
+            rounded="lg"
+            @click="openEvent(event.id)"
+          >
+            <div class="running-event-content">
+              <div class="d-flex align-center ga-2 running-event-main">
+                <span
+                  class="running-event-dot"
+                  :style="{ backgroundColor: event.color || '#2196F3' }"
+                />
+                <div class="running-event-text">
+                  <span class="font-weight-medium running-event-title">{{ event.name }}</span>
+                  <small
+                    v-if="event.details"
+                    class="running-event-details"
+                  >
+                    {{ event.details }}
+                  </small>
+                  <small
+                    v-if="categoryLabel(event)"
+                    class="running-event-details"
+                  >
+                    {{ categoryLabel(event) }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="d-flex align-center ga-1 running-event-controls">
+                <v-btn
+                  :icon="event.isRunning ? 'mdi-pause' : 'mdi-play'"
+                  size="x-small"
+                  :title="event.isRunning ? 'Поставить на паузу' : 'Продолжить таймер'"
+                  variant="text"
+                  @click.stop="toggleTimer(event.id)"
+                />
+                <v-btn
+                  color="success"
+                  icon="mdi-check"
+                  size="x-small"
+                  title="Завершить событие"
+                  variant="text"
+                  @click.stop="completeEvent(event.id)"
+                />
+                <div
+                  class="running-timer-value"
+                  :style="{ color: event.color || '#2196F3' }"
+                >
+                  {{ formatElapsed(event) }}
+                </div>
+              </div>
+            </div>
+          </v-sheet>
+        </transition-group>
+      </div>
+    </transition>
+  </div>
 </template>
 
 <script>
@@ -74,6 +100,7 @@
       timerTick: Date.now(),
       ticker: null,
       pendingCompletion: {},
+      isCollapsed: false,
     }),
     computed: {
       events () {
@@ -133,17 +160,29 @@
         const s = String(totalSeconds % 60).padStart(2, '0')
         return `${h}:${m}:${s}`
       },
+      toggleList () {
+        this.isCollapsed = !this.isCollapsed
+      },
     },
   }
 </script>
 
 <style scoped>
-.running-timer-popup-list {
+.running-timer-popup-wrapper {
   position: fixed;
-  top: calc(var(--v-layout-top) + 8px);
+  top: max(calc(var(--v-layout-top, 0px) + 8px), 72px);
   right: 16px;
-  z-index: 120;
+  z-index: 1100;
   width: min(420px, calc(100vw - 32px));
+}
+
+.running-timer-popup-toggle {
+  border: 1px solid rgb(var(--v-theme-surface-variant));
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.running-timer-popup-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -218,5 +257,17 @@
 .active-timers-pop-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+.active-timers-collapse-enter-active,
+.active-timers-collapse-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform-origin: top;
+}
+
+.active-timers-collapse-enter-from,
+.active-timers-collapse-leave-to {
+  opacity: 0;
+  transform: scaleY(0.95);
 }
 </style>

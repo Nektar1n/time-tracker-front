@@ -103,6 +103,17 @@
         return this.$route.path !== '/active-timers' && this.activeEvents.length > 0
       },
     },
+    watch: {
+      activeEvents: {
+        deep: true,
+        handler (value) {
+          const activeIds = new Set(value.map(item => item.id))
+          this.collapsedEvents = Object.fromEntries(
+            Object.entries(this.collapsedEvents).filter(([id]) => activeIds.has(Number(id))),
+          )
+        },
+      },
+    },
     mounted () {
       this.ticker = setInterval(() => {
         this.timerTick = Date.now()
@@ -235,6 +246,19 @@
   letter-spacing: 0.4px;
   min-width: 78px;
   text-align: right;
+}
+
+.timer-details-expand-enter-active,
+.timer-details-expand-leave-active {
+  transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.18s ease;
+  max-height: 50px;
+}
+
+.timer-details-expand-enter-from,
+.timer-details-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-2px);
 }
 
 .active-timers-pop-enter-active,

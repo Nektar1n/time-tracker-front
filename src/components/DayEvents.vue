@@ -80,10 +80,13 @@
           </template>
         </v-calendar>
       </v-sheet>
-      <day-sketch-pad :is-enabled="isDrawingEnabled" :selected-date="focus" />
+      <day-sketch-pad
+        :content-height="dayScrollHeight"
+        :is-enabled="isDrawingEnabled"
+        :scroll-top="dayScrollTop"
+        :selected-date="focus"
+      />
     </div>
-
-    <day-sketch-pad v-else :selected-date="focus" />
 
     <v-dialog v-model="isEditOpen" max-width="450">
       <v-card>
@@ -190,6 +193,8 @@
       suppressScrollEmit: false,
       scrollElement: null,
       isDrawingEnabled: false,
+      dayScrollTop: 0,
+      dayScrollHeight: 700,
     }),
     computed: {
       formattedDate () {
@@ -283,6 +288,7 @@
         this.scrollElement.addEventListener('scroll', this.onInternalScroll, {
           passive: true,
         })
+        this.updateSketchMetrics(this.scrollElement)
       },
       unbindScrollSync () {
         if (!this.scrollElement) return
@@ -312,7 +318,14 @@
           ) || null
         )
       },
+      updateSketchMetrics (el) {
+        if (!el) return
+
+        this.dayScrollTop = el.scrollTop
+        this.dayScrollHeight = el.scrollHeight
+      },
       onInternalScroll (event) {
+        this.updateSketchMetrics(event.target)
         if (this.suppressScrollEmit) return
         this.$emit('sync-scroll', {
           source: 'day-events',
@@ -325,6 +338,7 @@
 
         this.suppressScrollEmit = true
         el.scrollTop = top
+        this.updateSketchMetrics(el)
         requestAnimationFrame(() => {
           this.suppressScrollEmit = false
         })
@@ -563,6 +577,9 @@
               this.emitEvents()
             }
           }
+
+          this.localEvents.push(this.createEvent)
+          this.emitEvents()
         }
 
         this.createEvent = null

@@ -25,6 +25,7 @@
     <canvas
       ref="canvasRef"
       class="sketch-canvas"
+      :style="canvasStyle"
       @pointerdown="startDrawing"
       @pointerleave="stopDrawing"
       @pointermove="draw"
@@ -47,6 +48,14 @@
         type: Boolean,
         default: false,
       },
+      scrollTop: {
+        type: Number,
+        default: 0,
+      },
+      contentHeight: {
+        type: Number,
+        default: 700,
+      },
     },
     data () {
       return {
@@ -62,6 +71,7 @@
         drawing: false,
         ctx: null,
         drawingsByDay: {},
+        previousPoint: null,
       }
     },
     computed: {
@@ -72,10 +82,19 @@
         }
         return date.toISOString().slice(0, 10)
       },
+      canvasStyle () {
+        return {
+          height: `${Math.max(this.contentHeight, 700)}px`,
+          transform: `translateY(${-this.scrollTop}px)`,
+        }
+      },
     },
     watch: {
       selectedDate () {
         this.$nextTick(() => this.loadSketchForDay())
+      },
+      contentHeight () {
+        this.$nextTick(() => this.setupCanvas())
       },
     },
     mounted () {
@@ -93,7 +112,7 @@
 
         const ratio = window.devicePixelRatio || 1
         const width = canvas.clientWidth
-        const height = canvas.clientHeight
+        const height = Math.max(this.contentHeight, 700)
 
         canvas.width = width * ratio
         canvas.height = height * ratio
@@ -102,6 +121,8 @@
         this.ctx.scale(ratio, ratio)
         this.ctx.lineCap = 'round'
         this.ctx.lineJoin = 'round'
+        this.ctx.globalCompositeOperation = 'source-over'
+        this.ctx.imageSmoothingEnabled = true
 
         this.loadSketchForDay()
       },
@@ -109,32 +130,43 @@
         const rect = this.$refs.canvasRef.getBoundingClientRect()
         return {
           x: event.clientX - rect.left,
-          y: event.clientY - rect.top,
+          y: event.clientY - rect.top + this.scrollTop,
         }
       },
       startDrawing (event) {
         if (!this.isEnabled || !this.ctx) return
 
-        const { x, y } = this.canvasPosition(event)
+        const point = this.canvasPosition(event)
         this.ctx.beginPath()
-        this.ctx.moveTo(x, y)
+        this.ctx.moveTo(point.x, point.y)
         this.ctx.strokeStyle = this.strokeColor
         this.ctx.lineWidth = this.strokeWidth
+        this.ctx.shadowColor = `${this.strokeColor}66`
+        this.ctx.shadowBlur = Math.max(1, this.strokeWidth * 0.7)
+        this.previousPoint = point
         this.drawing = true
         event.target.setPointerCapture(event.pointerId)
       },
       draw (event) {
         if (!this.isEnabled || !this.drawing || !this.ctx) return
 
-        const { x, y } = this.canvasPosition(event)
-        this.ctx.lineTo(x, y)
+        const point = this.canvasPosition(event)
+        const prev = this.previousPoint || point
+        const controlX = (prev.x + point.x) / 2
+        const controlY = (prev.y + point.y) / 2
+
+        this.ctx.quadraticCurveTo(prev.x, prev.y, controlX, controlY)
         this.ctx.stroke()
+
+        this.previousPoint = point
       },
       stopDrawing (event) {
         if (!this.drawing || !this.ctx) return
 
         this.drawing = false
+        this.previousPoint = null
         this.ctx.closePath()
+        this.ctx.shadowBlur = 0
         if (event?.target?.hasPointerCapture?.(event.pointerId)) {
           event.target.releasePointerCapture(event.pointerId)
         }
@@ -151,7 +183,7 @@
         const canvas = this.$refs.canvasRef
         if (!canvas || !this.ctx) return
 
-        this.ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight)
+        this.ctx.clearRect(0, 0, canvas.width, canvas.height)
         delete this.drawingsByDay[this.dayKey]
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.drawingsByDay))
       },
@@ -159,13 +191,13 @@
         const canvas = this.$refs.canvasRef
         if (!canvas || !this.ctx) return
 
-        this.ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight)
+        this.ctx.clearRect(0, 0, canvas.width, canvas.height)
         const sketch = this.drawingsByDay[this.dayKey]
         if (!sketch) return
 
         const image = new Image()
         image.addEventListener('load', () => {
-          this.ctx.drawImage(image, 0, 0, canvas.clientWidth, canvas.clientHeight)
+          this.ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
         })
         image.src = sketch
       },
@@ -189,6 +221,7 @@
   position: absolute;
   inset: 0;
   z-index: 5;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -219,7 +252,6 @@
 
 .sketch-canvas {
   width: 100%;
-  height: 100%;
   display: block;
   touch-action: none;
   cursor: crosshair;

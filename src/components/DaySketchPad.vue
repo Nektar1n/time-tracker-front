@@ -56,6 +56,10 @@
         type: Number,
         default: 700,
       },
+      topOffset: {
+        type: Number,
+        default: 0,
+      },
     },
     data () {
       return {
@@ -72,6 +76,10 @@
         ctx: null,
         drawingsByDay: {},
         previousPoint: null,
+        canvasSize: {
+          width: 0,
+          height: 0,
+        },
       }
     },
     computed: {
@@ -85,6 +93,7 @@
       canvasStyle () {
         return {
           height: `${Math.max(this.contentHeight, 700)}px`,
+          marginTop: `${Math.max(0, this.topOffset)}px`,
           transform: `translateY(${-this.scrollTop}px)`,
         }
       },
@@ -114,11 +123,13 @@
         const width = canvas.clientWidth
         const height = Math.max(this.contentHeight, 700)
 
+        this.canvasSize = { width, height }
+
         canvas.width = width * ratio
         canvas.height = height * ratio
 
         this.ctx = canvas.getContext('2d')
-        this.ctx.scale(ratio, ratio)
+        this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
         this.ctx.lineCap = 'round'
         this.ctx.lineJoin = 'round'
         this.ctx.globalCompositeOperation = 'source-over'
@@ -130,7 +141,7 @@
         const rect = this.$refs.canvasRef.getBoundingClientRect()
         return {
           x: event.clientX - rect.left,
-          y: event.clientY - rect.top + this.scrollTop,
+          y: event.clientY - rect.top,
         }
       },
       startDrawing (event) {
@@ -176,7 +187,11 @@
         const canvas = this.$refs.canvasRef
         if (!canvas) return
 
-        this.drawingsByDay[this.dayKey] = canvas.toDataURL('image/png')
+        this.drawingsByDay[this.dayKey] = {
+          image: canvas.toDataURL('image/png'),
+          width: this.canvasSize.width,
+          height: this.canvasSize.height,
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.drawingsByDay))
       },
       clearSketch () {
@@ -191,15 +206,27 @@
         const canvas = this.$refs.canvasRef
         if (!canvas || !this.ctx) return
 
-        this.ctx.clearRect(0, 0, canvas.width, canvas.height)
+        this.ctx.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height)
         const sketch = this.drawingsByDay[this.dayKey]
         if (!sketch) return
 
+        const imageSource = typeof sketch === 'string' ? sketch : sketch.image
+        if (!imageSource) return
+
+        const sourceWidth = typeof sketch === 'string' ? this.canvasSize.width : sketch.width
+        const sourceHeight = typeof sketch === 'string' ? this.canvasSize.height : sketch.height
+
         const image = new Image()
         image.addEventListener('load', () => {
-          this.ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+          const widthRatio = this.canvasSize.width / Math.max(1, sourceWidth)
+          const heightRatio = this.canvasSize.height / Math.max(1, sourceHeight)
+          const ratio = Math.min(widthRatio, heightRatio)
+          const targetWidth = sourceWidth * ratio
+          const targetHeight = sourceHeight * ratio
+
+          this.ctx.drawImage(image, 0, 0, targetWidth, targetHeight)
         })
-        image.src = sketch
+        image.src = imageSource
       },
       readStorage () {
         try {

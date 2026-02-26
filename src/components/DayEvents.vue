@@ -85,6 +85,7 @@
         :is-enabled="isDrawingEnabled"
         :scroll-top="dayScrollTop"
         :selected-date="focus"
+        :top-offset="sketchTopOffset"
       />
     </div>
 
@@ -195,6 +196,7 @@ export default {
     isDrawingEnabled: false,
     dayScrollTop: 0,
     dayScrollHeight: 700,
+    sketchTopOffset: 0,
   }),
   computed: {
     formattedDate() {
@@ -325,6 +327,7 @@ export default {
 
       this.dayScrollTop = el.scrollTop;
       this.dayScrollHeight = el.scrollHeight;
+      this.sketchTopOffset = el.offsetTop;
     },
     onInternalScroll(event) {
       this.updateSketchMetrics(event.target);

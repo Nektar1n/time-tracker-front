@@ -32,46 +32,57 @@
           @mouseup:time="endDrag"
         >
           <template #event="{ event, timed, eventSummary }">
-            <div class="v-event-draggable d-flex align-center ga-1">
-              <span v-if="categoryLabel(event)" class="event-category">{{
-                categoryLabel(event)
-              }}</span>
-              <v-btn
-                :disabled="event.isCompleted"
-                icon
-                size="x-small"
-                variant="text"
-                @click.stop="toggleTimer(event)"
-              >
-                <v-icon size="14">{{
-                  event.isRunning ? "mdi-pause" : "mdi-play"
-                }}</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click.stop="completeTask(event)"
-              >
-                <v-icon
-                  :color="event.isCompleted ? 'success' : undefined"
-                  size="14"
+            <div class="v-event-draggable">
+              <div class="event-controls-row">
+                <span v-if="categoryLabel(event)" class="event-category">{{
+                  categoryLabel(event)
+                }}</span>
+                <v-btn
+                  :disabled="event.isCompleted"
+                  icon
+                  size="x-small"
+                  variant="text"
+                  @click.stop="toggleTimer(event)"
                 >
-                  {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
-                </v-icon>
-              </v-btn>
-              <v-btn
-                draggable="true"
-                icon
-                size="x-small"
-                title="Перенести в левый календарь"
-                variant="text"
-                @click="openEditEventById(event.id)"
-              >
-                <v-icon size="14">mdi-drag</v-icon>
-              </v-btn>
-              <component :is="eventSummary" />
-              <small class="event-timer">{{ formatElapsed(event) }}</small>
+                  <v-icon size="14">{{
+                    event.isRunning ? "mdi-pause" : "mdi-play"
+                  }}</v-icon>
+                </v-btn>
+                <v-btn
+                  icon
+                  size="x-small"
+                  variant="text"
+                  @click.stop="completeTask(event)"
+                >
+                  <v-icon
+                    :color="event.isCompleted ? 'success' : undefined"
+                    size="14"
+                  >
+                    {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
+                  </v-icon>
+                </v-btn>
+                <v-btn
+                  draggable="true"
+                  icon
+                  size="x-small"
+                  title="Перенести в левый календарь"
+                  variant="text"
+                  @click="openEditEventById(event.id)"
+                >
+                  <v-icon size="14">mdi-drag</v-icon>
+                </v-btn>
+                <component :is="eventSummary" />
+                <small class="event-timer">{{ formatElapsed(event) }}</small>
+                <v-btn
+                  icon
+                  size="x-small"
+                  title="Удалить событие"
+                  variant="text"
+                  @click.stop="deleteEventById(event.id)"
+                >
+                  <v-icon size="14">mdi-trash-can-outline</v-icon>
+                </v-btn>
+              </div>
             </div>
             <div v-if="event.details" class="event-details">{{ event.details }}</div>
             <div v-if="hasChecklist(event)" class="event-checklist">
@@ -116,7 +127,7 @@
             <v-btn prepend-icon="mdi-plus" size="x-small" variant="text" @click="addDraftChecklistItem">Добавить пункт</v-btn>
           </div>
           <div v-if="(draftEvent.checklist || []).length > 0" class="d-flex flex-column ga-2">
-            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-2">
+            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-1 checklist-editor-row">
               <v-checkbox-btn v-model="item.done" hide-details />
               <v-text-field v-model="item.text" density="compact" hide-details placeholder="Текст пункта" />
               <v-btn icon="mdi-delete" size="x-small" variant="text" @click="removeDraftChecklistItem(item.id)" />
@@ -159,6 +170,14 @@
           </div>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            color="error"
+            prepend-icon="mdi-trash-can-outline"
+            variant="text"
+            @click="deleteEventById(draftEvent.id)"
+          >
+            Удалить
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
           <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
@@ -395,6 +414,37 @@
           this.localEvents.map(item => ({ ...item })),
         )
       },
+      deleteEventById (eventId) {
+        const idx = this.localEvents.findIndex(item => item.id === eventId)
+        if (idx === -1) return
+
+        this.localEvents.splice(idx, 1)
+        this.emitEvents()
+        if (this.draftEvent?.id === eventId) {
+          this.isEditOpen = false
+          this.draftEvent = {}
+        }
+      },
+      estimateEventMinDuration (event) {
+        const detailLines = Math.ceil(String(event?.details || '').length / 32)
+        const checklistLines = Array.isArray(event?.checklist) ? event.checklist.length : 0
+        const baseLines = 2 + detailLines + checklistLines
+        const minMinutes = Math.max(30, baseLines * 8)
+        return minMinutes * 60 * 1000
+      },
+      ensureEventFitsContent (event) {
+        if (!event) return event
+        const start = this.toTimestamp(event.start)
+        const end = this.toTimestamp(event.end)
+        const minDuration = this.estimateEventMinDuration(event)
+        const currentDuration = Math.max(0, end - start)
+        if (currentDuration >= minDuration) return event
+
+        return {
+          ...event,
+          end: start + minDuration,
+        }
+      },
       openEditEvent (nativeEvent, payload) {
         const event = payload?.event
         if (!event) return
@@ -423,13 +473,14 @@
             endInput: _endInput,
             ...restDraft
           } = this.draftEvent
-          const updatedEvent = {
+          let updatedEvent = {
             ...restDraft,
             start: validStart,
             end: Math.max(validEnd, validStart),
             isCompleted: Boolean(this.draftEvent.isCompleted),
             checklist: this.normalizeChecklist(this.draftEvent.checklist),
           }
+          updatedEvent = this.ensureEventFitsContent(updatedEvent)
           if (updatedEvent.isCompleted) {
             this.pauseEvent(updatedEvent)
           }
@@ -685,10 +736,12 @@
           item.id === itemId ? { ...item, done: Boolean(done) } : item,
         )
 
-        this.localEvents.splice(idx, 1, {
+        const updatedEvent = this.ensureEventFitsContent({
           ...this.localEvents[idx],
           checklist: updatedChecklist,
         })
+
+        this.localEvents.splice(idx, 1, updatedEvent)
         this.emitEvents()
       },
       rndElement (arr) {
@@ -707,7 +760,15 @@
 }
 
 .v-event-draggable {
-  padding-left: 6px;
+  padding: 4px 6px 10px;
+  min-height: 100%;
+}
+
+.event-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 :deep(.v-event-timed),
@@ -759,13 +820,26 @@
   font-size: 12px;
   font-weight: 700;
   margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.checklist-editor-row :deep(.v-selection-control) {
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-editor-row :deep(.v-selection-control__wrapper) {
+  width: 22px;
+  height: 22px;
 }
 
 .v-event-drag-bottom {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 4px;
+  bottom: 2px;
   height: 4px;
   cursor: ns-resize;
 }

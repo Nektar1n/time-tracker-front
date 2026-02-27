@@ -448,13 +448,14 @@
             endInput: _endInput,
             ...restDraft
           } = this.draftEvent
-          const updatedEvent = {
+          let updatedEvent = {
             ...restDraft,
             start: validStart,
             end: Math.max(validEnd, validStart),
             isCompleted: Boolean(this.draftEvent.isCompleted),
             checklist: this.normalizeChecklist(this.draftEvent.checklist),
           }
+          updatedEvent = this.ensureEventFitsContent(updatedEvent)
           if (updatedEvent.isCompleted) {
             this.pauseEvent(updatedEvent)
           }
@@ -710,10 +711,12 @@
           item.id === itemId ? { ...item, done: Boolean(done) } : item,
         )
 
-        this.localEvents.splice(idx, 1, {
+        const updatedEvent = this.ensureEventFitsContent({
           ...this.localEvents[idx],
           checklist: updatedChecklist,
         })
+
+        this.localEvents.splice(idx, 1, updatedEvent)
         this.emitEvents()
       },
       rndElement (arr) {

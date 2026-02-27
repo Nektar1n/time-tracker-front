@@ -348,12 +348,13 @@
         const { startInput: _startInput, endInput: _endInput, ...restDraft } = this.draftEvent
         const idx = this.localEvents.findIndex(item => item.id === restDraft.id)
         if (idx !== -1) {
-          this.localEvents.splice(idx, 1, {
+          const updatedEvent = this.ensureEventFitsContent({
             ...restDraft,
             checklist: this.normalizeChecklist(this.draftEvent.checklist),
             start: validStart,
             end: Math.max(validEnd, validStart),
           })
+          this.localEvents.splice(idx, 1, updatedEvent)
           this.emitEvents()
         }
         this.isEditOpen = false
@@ -433,6 +434,26 @@
       hasChecklist (event) {
         return Array.isArray(event?.checklist) && event.checklist.length > 0
       },
+      estimateEventMinDuration (event) {
+        const detailLines = Math.ceil(String(event?.details || '').length / 32)
+        const checklistLines = Array.isArray(event?.checklist) ? event.checklist.length : 0
+        const baseLines = 2 + detailLines + checklistLines
+        const minMinutes = Math.max(30, baseLines * 8)
+        return minMinutes * 60 * 1000
+      },
+      ensureEventFitsContent (event) {
+        if (!event) return event
+        const start = this.toTimestamp(event.start)
+        const end = this.toTimestamp(event.end)
+        const minDuration = this.estimateEventMinDuration(event)
+        const currentDuration = Math.max(0, end - start)
+        if (currentDuration >= minDuration) return event
+
+        return {
+          ...event,
+          end: new Date(start + minDuration),
+        }
+      },
       normalizeChecklist (checklist) {
         if (!Array.isArray(checklist)) return []
 
@@ -460,10 +481,12 @@
           item.id === itemId ? { ...item, done: Boolean(done) } : item,
         )
 
-        this.localEvents.splice(idx, 1, {
+        const updatedEvent = this.ensureEventFitsContent({
           ...current,
           checklist: updatedChecklist,
         })
+
+        this.localEvents.splice(idx, 1, updatedEvent)
         this.emitEvents()
       },
       eventStatusIcon (event) {

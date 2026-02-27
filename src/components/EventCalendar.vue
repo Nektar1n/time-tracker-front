@@ -29,6 +29,7 @@
         :event-overlap-mode="mode"
         :event-overlap-threshold="30"
         :events="localEvents"
+        locale="ru-RU"
         :type="type"
         :weekdays="weekday"
         @change="getEvents"
@@ -43,6 +44,17 @@
         <template #event="{ event, eventSummary }">
           <div class="calendar-event-content">
             <component :is="eventSummary" />
+            <div v-if="event.details" class="calendar-event-details">{{ event.details }}</div>
+            <div v-if="hasChecklist(event)" class="calendar-event-checklist">
+              <label
+                v-for="item in event.checklist"
+                :key="item.id"
+                class="calendar-event-checklist-item"
+              >
+                <input :checked="Boolean(item.done)" type="checkbox" @change.stop="toggleChecklistItem(event, item.id, $event.target.checked)">
+                <span :class="{ 'calendar-event-checklist-item--done': item.done }">{{ item.text }}</span>
+              </label>
+            </div>
             <span
               v-if="eventStatusIcon(event)"
               class="calendar-event-status-icon"
@@ -94,6 +106,17 @@
         <v-card-text class="d-flex flex-column ga-3">
           <v-text-field v-model="draftEvent.name" label="Название" />
           <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
+          <div class="d-flex align-center justify-space-between">
+            <div class="text-subtitle-2">Чеклист</div>
+            <v-btn prepend-icon="mdi-plus" size="x-small" variant="text" @click="addDraftChecklistItem">Добавить пункт</v-btn>
+          </div>
+          <div v-if="(draftEvent.checklist || []).length > 0" class="d-flex flex-column ga-2">
+            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-2">
+              <v-checkbox-btn v-model="item.done" hide-details />
+              <v-text-field v-model="item.text" density="compact" hide-details placeholder="Текст пункта" />
+              <v-btn icon="mdi-delete" size="x-small" variant="text" @click="removeDraftChecklistItem(item.id)" />
+            </div>
+          </div>
           <v-text-field
             v-model="draftEvent.startInput"
             label="Начало"
@@ -195,7 +218,7 @@
             return
           }
 
-          this.localEvents = value.map(item => ({ ...item }))
+          this.localEvents = value.map(item => ({ ...item, checklist: this.normalizeChecklist(item.checklist) }))
         },
       },
       selectedDate: {
@@ -302,7 +325,7 @@
         const event = payload?.event
         if (!event) return
 
-        this.draftEvent = { ...event }
+        this.draftEvent = { ...event, checklist: this.normalizeChecklist(event.checklist) }
         this.draftEvent.startInput = this.toDateTimeInput(event.start)
         this.draftEvent.endInput = this.toDateTimeInput(event.end)
         this.isEditOpen = true
@@ -319,6 +342,7 @@
         if (idx !== -1) {
           this.localEvents.splice(idx, 1, {
             ...restDraft,
+            checklist: this.normalizeChecklist(this.draftEvent.checklist),
             start: validStart,
             end: Math.max(validEnd, validStart),
           })
@@ -376,6 +400,7 @@
             isCompleted: false,
             categoryId: this.rndElement(this.categories)?.id || null,
             wasPaused: false,
+            checklist: [],
           })
         }
 
@@ -385,6 +410,42 @@
       },
       getEventColor (event) {
         return event.color
+      },
+      hasChecklist (event) {
+        return Array.isArray(event?.checklist) && event.checklist.length > 0
+      },
+      normalizeChecklist (checklist) {
+        if (!Array.isArray(checklist)) return []
+
+        return checklist
+          .map(item => ({
+            id: item?.id || crypto.randomUUID(),
+            text: String(item?.text || '').trim(),
+            done: Boolean(item?.done),
+          }))
+          .filter(item => item.text)
+      },
+      addDraftChecklistItem () {
+        if (!Array.isArray(this.draftEvent.checklist)) this.draftEvent.checklist = []
+        this.draftEvent.checklist.push({ id: crypto.randomUUID(), text: '', done: false })
+      },
+      removeDraftChecklistItem (itemId) {
+        this.draftEvent.checklist = (this.draftEvent.checklist || []).filter(item => item.id !== itemId)
+      },
+      toggleChecklistItem (event, itemId, done) {
+        const idx = this.localEvents.findIndex(item => item.id === event.id)
+        if (idx === -1) return
+
+        const current = this.localEvents[idx]
+        const updatedChecklist = this.normalizeChecklist(current.checklist).map(item =>
+          item.id === itemId ? { ...item, done: Boolean(done) } : item,
+        )
+
+        this.localEvents.splice(idx, 1, {
+          ...current,
+          checklist: updatedChecklist,
+        })
+        this.emitEvents()
       },
       eventStatusIcon (event) {
         if (event?.isCompleted) return 'completed'
@@ -442,6 +503,7 @@
             isCompleted: false,
             categoryId: this.rndElement(this.categories)?.id || null,
             wasPaused: false,
+            checklist: [],
           }
 
           this.localEvents.push(this.createEvent)
@@ -554,6 +616,30 @@
     position: relative;
     min-height: 100%;
     padding-right: 14px;
+  }
+
+  .calendar-event-details {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .calendar-event-checklist {
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+  }
+
+  .calendar-event-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .calendar-event-checklist-item--done {
+    text-decoration: line-through;
+    opacity: 0.7;
   }
 
   .calendar-event-status-icon {

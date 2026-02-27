@@ -28,6 +28,12 @@
           </v-card-title>
           <v-card-text>
             <div class="text-body-2 mb-2">{{ event.details || 'Без описания' }}</div>
+            <div v-if="hasChecklist(event)" class="text-caption mb-2">
+              <div v-for="item in event.checklist" :key="item.id">
+                <v-icon :icon="item.done ? 'mdi-checkbox-marked-outline' : 'mdi-checkbox-blank-outline'" size="14" />
+                <span :class="{ 'text-decoration-line-through': item.done }">{{ item.text }}</span>
+              </div>
+            </div>
             <div v-if="categoryLabel(event)" class="text-caption mb-2">{{ categoryLabel(event) }}</div>
             <div class="text-caption text-medium-emphasis">
               Старт: {{ formatDateTime(event.start) }}
@@ -71,6 +77,17 @@
         <v-card-text class="d-flex flex-column ga-3">
           <v-text-field v-model="draftEvent.name" label="Название" />
           <v-textarea v-model="draftEvent.details" label="Описание" rows="3" />
+          <div class="d-flex align-center justify-space-between">
+            <div class="text-subtitle-2">Чеклист</div>
+            <v-btn prepend-icon="mdi-plus" size="x-small" variant="text" @click="addDraftChecklistItem">Добавить пункт</v-btn>
+          </div>
+          <div v-if="(draftEvent.checklist || []).length > 0" class="d-flex flex-column ga-2">
+            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-2">
+              <v-checkbox-btn v-model="item.done" hide-details />
+              <v-text-field v-model="item.text" density="compact" hide-details placeholder="Текст пункта" />
+              <v-btn icon="mdi-delete" size="x-small" variant="text" @click="removeDraftChecklistItem(item.id)" />
+            </div>
+          </div>
           <v-text-field
             v-model="draftEvent.startInput"
             label="Начало"
@@ -181,6 +198,7 @@
           start: event.start,
           end: event.end,
           categoryId: event.categoryId || null,
+          checklist: this.normalizeChecklist(event.checklist),
           startInput: this.toDateTimeInput(event.start),
           endInput: this.toDateTimeInput(event.end),
         }
@@ -199,6 +217,7 @@
           start: validStart,
           end: Math.max(validEnd, validStart),
           categoryId: this.draftEvent.categoryId || null,
+          checklist: this.normalizeChecklist(this.draftEvent.checklist),
         })
         this.isEditOpen = false
       },
@@ -227,13 +246,33 @@
         const s = String(totalSeconds % 60).padStart(2, '0')
         return `${h}:${m}:${s}`
       },
+      hasChecklist (event) {
+        return Array.isArray(event?.checklist) && event.checklist.length > 0
+      },
+      normalizeChecklist (checklist) {
+        if (!Array.isArray(checklist)) return []
+        return checklist
+          .map(item => ({
+            id: item?.id || crypto.randomUUID(),
+            text: String(item?.text || '').trim(),
+            done: Boolean(item?.done),
+          }))
+          .filter(item => item.text)
+      },
+      addDraftChecklistItem () {
+        if (!Array.isArray(this.draftEvent.checklist)) this.draftEvent.checklist = []
+        this.draftEvent.checklist.push({ id: crypto.randomUUID(), text: '', done: false })
+      },
+      removeDraftChecklistItem (itemId) {
+        this.draftEvent.checklist = (this.draftEvent.checklist || []).filter(item => item.id !== itemId)
+      },
       categoryLabel (event) {
         const category = getCategoryById(event?.categoryId)
         return category ? `${category.emoji} ${category.name}` : ''
       },
       formatDateTime (value) {
         const date = new Date(value)
-        return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+        return `${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', { hour12: false })}`
       },
     },
   }

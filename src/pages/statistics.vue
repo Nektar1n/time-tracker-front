@@ -107,7 +107,7 @@
         return 'Завершил'
       },
       formatDateTime (value) {
-        return new Date(value).toLocaleString()
+        return new Date(value).toLocaleString('ru-RU', { hour12: false })
       },
       formatDuration (ms) {
         const totalSeconds = Math.max(0, Math.floor(ms / 1000))

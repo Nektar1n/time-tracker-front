@@ -104,8 +104,7 @@
       canvasStyle () {
         return {
           height: `${Math.max(this.contentHeight, 700)}px`,
-          marginTop: `${Math.max(0, this.topOffset)}px`,
-          transform: `translateY(${-this.scrollTop}px)`,
+          top: `${Math.max(0, this.topOffset) - this.scrollTop}px`,
         }
       },
     },
@@ -303,6 +302,8 @@
 }
 
 .sketch-canvas {
+  position: absolute;
+  left: 0;
   width: 100%;
   display: block;
   touch-action: none;

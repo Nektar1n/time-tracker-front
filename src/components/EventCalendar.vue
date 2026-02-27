@@ -47,7 +47,7 @@
             <div v-if="event.details" class="calendar-event-details">{{ event.details }}</div>
             <div v-if="hasChecklist(event)" class="calendar-event-checklist">
               <label
-                v-for="item in event.checklist"
+                v-for="item in event.checklist.slice(0, 2)"
                 :key="item.id"
                 class="calendar-event-checklist-item"
               >
@@ -111,7 +111,7 @@
             <v-btn prepend-icon="mdi-plus" size="x-small" variant="text" @click="addDraftChecklistItem">Добавить пункт</v-btn>
           </div>
           <div v-if="(draftEvent.checklist || []).length > 0" class="d-flex flex-column ga-2">
-            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-2">
+            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-1 checklist-editor-row">
               <v-checkbox-btn v-model="item.done" hide-details />
               <v-text-field v-model="item.text" density="compact" hide-details placeholder="Текст пункта" />
               <v-btn icon="mdi-delete" size="x-small" variant="text" @click="removeDraftChecklistItem(item.id)" />
@@ -143,6 +143,14 @@
           />
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            color="error"
+            prepend-icon="mdi-trash-can-outline"
+            variant="text"
+            @click="deleteEventById(draftEvent.id)"
+          >
+            Удалить
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
           <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
@@ -349,6 +357,17 @@
           this.emitEvents()
         }
         this.isEditOpen = false
+      },
+      deleteEventById (eventId) {
+        const idx = this.localEvents.findIndex(item => item.id === eventId)
+        if (idx === -1) return
+
+        this.localEvents.splice(idx, 1)
+        this.emitEvents()
+        if (this.draftEvent?.id === eventId) {
+          this.isEditOpen = false
+          this.draftEvent = {}
+        }
       },
       toDateTimeInput (value) {
         const date = new Date(value)
@@ -615,12 +634,31 @@
   .calendar-event-content {
     position: relative;
     min-height: 100%;
-    padding-right: 14px;
+    height: 100%;
+    padding: 2px 14px 2px 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+  }
+
+  .calendar-event-content :deep(*) {
+    max-width: 100%;
+  }
+
+  .calendar-event-content :deep(.v-event__content),
+  .calendar-event-content :deep(.v-event-title) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .calendar-event-details {
     font-size: 11px;
     line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .calendar-event-checklist {
@@ -628,13 +666,33 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    font-size: 11px;
+    font-size: 10px;
+    overflow: hidden;
   }
 
   .calendar-event-checklist-item {
     display: flex;
     align-items: center;
     gap: 4px;
+    line-height: 1.2;
+    min-width: 0;
+  }
+
+  .calendar-event-checklist-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .checklist-editor-row :deep(.v-selection-control) {
+    min-height: 24px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .checklist-editor-row :deep(.v-selection-control__wrapper) {
+    width: 22px;
+    height: 22px;
   }
 
   .calendar-event-checklist-item--done {
@@ -652,6 +710,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
 
   .calendar-event-status-icon--running {

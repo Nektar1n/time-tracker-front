@@ -32,67 +32,73 @@
           @mouseup:time="endDrag"
         >
           <template #event="{ event, timed, eventSummary }">
-            <div class="v-event-draggable d-flex align-center ga-1">
-              <span v-if="categoryLabel(event)" class="event-category">{{
-                categoryLabel(event)
-              }}</span>
-              <v-btn
-                :disabled="event.isCompleted"
-                icon
-                size="x-small"
-                variant="text"
-                @click.stop="toggleTimer(event)"
-              >
-                <v-icon size="14">{{
-                  event.isRunning ? "mdi-pause" : "mdi-play"
-                }}</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click.stop="completeTask(event)"
-              >
-                <v-icon
-                  :color="event.isCompleted ? 'success' : undefined"
-                  size="14"
+            <div class="v-event-draggable">
+              <div class="event-controls-row">
+                <v-btn
+                  :disabled="event.isCompleted"
+                  icon
+                  size="x-small"
+                  variant="text"
+                  @click.stop="toggleTimer(event)"
                 >
-                  {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
-                </v-icon>
-              </v-btn>
-              <v-btn
-                draggable="true"
-                icon
-                size="x-small"
-                title="Перенести в левый календарь"
-                variant="text"
-                @click="openEditEventById(event.id)"
-              >
-                <v-icon size="14">mdi-drag</v-icon>
-              </v-btn>
-              <component :is="eventSummary" />
-              <small class="event-timer">{{ formatElapsed(event) }}</small>
-            </div>
-            <div v-if="event.details" class="event-details">{{ event.details }}</div>
-            <div v-if="hasChecklist(event)" class="event-checklist">
-              <label
-                v-for="item in event.checklist"
-                :key="item.id"
-                class="event-checklist-item"
-              >
-                <input
-                  :checked="Boolean(item.done)"
-                  type="checkbox"
-                  @change.stop="toggleChecklistItem(event, item.id, $event.target.checked)"
+                  <v-icon size="14">{{ event.isRunning ? "mdi-pause" : "mdi-play" }}</v-icon>
+                </v-btn>
+                <v-btn
+                  icon
+                  size="x-small"
+                  variant="text"
+                  @click.stop="completeTask(event)"
                 >
-                <span :class="{ 'event-checklist-item--done': item.done }">{{ item.text }}</span>
-              </label>
+                  <v-icon :color="event.isCompleted ? 'success' : undefined" size="14">
+                    {{ event.isCompleted ? "mdi-check-circle" : "mdi-check" }}
+                  </v-icon>
+                </v-btn>
+                <v-btn
+                  draggable="true"
+                  icon
+                  size="x-small"
+                  title="Редактировать"
+                  variant="text"
+                  @click.stop="openEditEventById(event.id)"
+                >
+                  <v-icon size="14">mdi-pencil-outline</v-icon>
+                </v-btn>
+                <small class="event-timer">{{ formatElapsed(event) }}</small>
+                <v-btn
+                  icon
+                  size="x-small"
+                  title="Удалить событие"
+                  variant="text"
+                  @click.stop="deleteEventById(event.id)"
+                >
+                  <v-icon size="14">mdi-trash-can-outline</v-icon>
+                </v-btn>
+              </div>
+              <div class="event-main-line">
+                <span v-if="categoryLabel(event)" class="event-category">{{ categoryLabel(event) }}</span>
+                <component :is="eventSummary" class="event-summary" />
+              </div>
+              <div v-if="event.details" class="event-details">{{ event.details }}</div>
+              <div v-if="hasChecklist(event)" class="event-checklist">
+                <label
+                  v-for="item in event.checklist.slice(0, 2)"
+                  :key="item.id"
+                  class="event-checklist-item"
+                >
+                  <input
+                    :checked="Boolean(item.done)"
+                    type="checkbox"
+                    @change.stop="toggleChecklistItem(event, item.id, $event.target.checked)"
+                  >
+                  <span :class="{ 'event-checklist-item--done': item.done }">{{ item.text }}</span>
+                </label>
+              </div>
+              <div
+                v-if="timed"
+                class="v-event-drag-bottom"
+                @mousedown.stop="extendBottom(event)"
+              />
             </div>
-            <div
-              v-if="timed"
-              class="v-event-drag-bottom"
-              @mousedown.stop="extendBottom(event)"
-            />
           </template>
         </v-calendar>
       </v-sheet>
@@ -116,7 +122,7 @@
             <v-btn prepend-icon="mdi-plus" size="x-small" variant="text" @click="addDraftChecklistItem">Добавить пункт</v-btn>
           </div>
           <div v-if="(draftEvent.checklist || []).length > 0" class="d-flex flex-column ga-2">
-            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-2">
+            <div v-for="item in draftEvent.checklist" :key="item.id" class="d-flex align-center ga-1 checklist-editor-row">
               <v-checkbox-btn v-model="item.done" hide-details />
               <v-text-field v-model="item.text" density="compact" hide-details placeholder="Текст пункта" />
               <v-btn icon="mdi-delete" size="x-small" variant="text" @click="removeDraftChecklistItem(item.id)" />
@@ -159,6 +165,14 @@
           </div>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            color="error"
+            prepend-icon="mdi-trash-can-outline"
+            variant="text"
+            @click="deleteEventById(draftEvent.id)"
+          >
+            Удалить
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" @click="isEditOpen = false">Отмена</v-btn>
           <v-btn color="primary" @click="saveEvent">Сохранить</v-btn>
@@ -394,6 +408,17 @@
           'update:events',
           this.localEvents.map(item => ({ ...item })),
         )
+      },
+      deleteEventById (eventId) {
+        const idx = this.localEvents.findIndex(item => item.id === eventId)
+        if (idx === -1) return
+
+        this.localEvents.splice(idx, 1)
+        this.emitEvents()
+        if (this.draftEvent?.id === eventId) {
+          this.isEditOpen = false
+          this.draftEvent = {}
+        }
       },
       openEditEvent (nativeEvent, payload) {
         const event = payload?.event
@@ -707,7 +732,30 @@
 }
 
 .v-event-draggable {
-  padding-left: 6px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+  min-height: 100%;
+  padding: 2px 6px 8px;
+  overflow: hidden;
+}
+
+.event-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 20px;
+  flex-shrink: 0;
+}
+
+.event-main-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 :deep(.v-event-timed),
@@ -715,6 +763,7 @@
   user-select: none;
   -webkit-user-select: none;
   min-height: 50px;
+  overflow: hidden;
 }
 
 :deep(.v-event:not(.v-event-timed)) {
@@ -722,32 +771,54 @@
 }
 
 .event-category {
-  font-size: 11px;
+  font-size: 10px;
   background: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
-  border: 0.5px solid rgb(var(--v-theme-surface-variant));
+  border: 1px solid rgb(var(--v-theme-surface-variant));
   border-radius: 10px;
-  padding: 1px 6px;
+  padding: 0 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.event-summary {
+  min-width: 0;
+}
+
+.event-summary :deep(*) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .event-details {
   font-size: 11px;
   line-height: 1.2;
-  margin: 2px 0 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .event-checklist {
-  margin: 2px 0 0 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow: hidden;
 }
 
 .event-checklist-item {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.event-checklist-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .event-checklist-item--done {
@@ -756,16 +827,29 @@
 }
 
 .event-timer {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.checklist-editor-row :deep(.v-selection-control) {
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-editor-row :deep(.v-selection-control__wrapper) {
+  width: 22px;
+  height: 22px;
 }
 
 .v-event-drag-bottom {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 4px;
+  bottom: 1px;
   height: 4px;
   cursor: ns-resize;
 }

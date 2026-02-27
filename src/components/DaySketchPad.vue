@@ -1,6 +1,16 @@
 <template>
   <div class="sketch-overlay" :class="{ 'sketch-overlay--active': isEnabled }">
     <div v-if="isEnabled" class="sketch-toolbar">
+      <v-btn-toggle
+        v-model="toolMode"
+        class="sketch-tool-toggle"
+        density="compact"
+        mandatory
+        variant="outlined"
+      >
+        <v-btn size="small" value="draw">Кисть</v-btn>
+        <v-btn size="small" value="erase">Ластик</v-btn>
+      </v-btn-toggle>
       <v-select
         v-model="strokeColor"
         class="sketch-control"
@@ -65,6 +75,7 @@
       return {
         strokeColor: '#263238',
         strokeWidth: 3,
+        toolMode: 'draw',
         colorOptions: [
           { title: 'Графит', value: '#263238' },
           { title: 'Синий', value: '#1565C0' },
@@ -150,10 +161,19 @@
         const point = this.canvasPosition(event)
         this.ctx.beginPath()
         this.ctx.moveTo(point.x, point.y)
-        this.ctx.strokeStyle = this.strokeColor
         this.ctx.lineWidth = this.strokeWidth
-        this.ctx.shadowColor = `${this.strokeColor}66`
-        this.ctx.shadowBlur = Math.max(1, this.strokeWidth * 0.7)
+
+        if (this.toolMode === 'erase') {
+          this.ctx.globalCompositeOperation = 'destination-out'
+          this.ctx.strokeStyle = 'rgba(0,0,0,1)'
+          this.ctx.shadowBlur = 0
+        } else {
+          this.ctx.globalCompositeOperation = 'source-over'
+          this.ctx.strokeStyle = this.strokeColor
+          this.ctx.shadowColor = `${this.strokeColor}66`
+          this.ctx.shadowBlur = Math.max(1, this.strokeWidth * 0.7)
+        }
+
         this.previousPoint = point
         this.drawing = true
         event.target.setPointerCapture(event.pointerId)
@@ -178,6 +198,7 @@
         this.previousPoint = null
         this.ctx.closePath()
         this.ctx.shadowBlur = 0
+        this.ctx.globalCompositeOperation = 'source-over'
         if (event?.target?.hasPointerCapture?.(event.pointerId)) {
           event.target.releasePointerCapture(event.pointerId)
         }
@@ -271,6 +292,10 @@
 
 .sketch-control {
   width: 130px;
+}
+
+.sketch-tool-toggle {
+  max-width: 180px;
 }
 
 .sketch-slider {

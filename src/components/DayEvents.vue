@@ -292,7 +292,7 @@
         deep: true,
         handler (value) {
           if (!value || value.source === 'day-events') return
-          this.applySyncedScroll(value.top)
+          this.applySyncedScroll(value.top, value.behavior || 'auto')
         },
       },
     },
@@ -361,11 +361,7 @@
           ?.getBoundingClientRect?.()
         const scrollRect = el.getBoundingClientRect()
 
-        if (stageRect) {
-          this.sketchTopOffset = Math.max(0, scrollRect.top - stageRect.top)
-        } else {
-          this.sketchTopOffset = el.offsetTop
-        }
+        this.sketchTopOffset = stageRect ? Math.max(0, scrollRect.top - stageRect.top) : el.offsetTop
       },
       onInternalScroll (event) {
         this.updateSketchMetrics(event.target)
@@ -375,12 +371,15 @@
           top: event.target.scrollTop,
         })
       },
-      applySyncedScroll (top) {
+      applySyncedScroll (top, behavior = 'auto') {
         const el = this.getScrollElement()
         if (!el) return
 
         this.suppressScrollEmit = true
-        el.scrollTop = top
+        el.scrollTo({
+          top,
+          behavior,
+        })
         this.updateSketchMetrics(el)
         requestAnimationFrame(() => {
           this.suppressScrollEmit = false

@@ -108,6 +108,9 @@
           width: 0,
           height: 0,
         },
+        enhanceDelayMs: 950,
+        pendingEnhanceTimeout: null,
+        activeAnimationFrame: null,
       }
     },
     computed: {
@@ -142,8 +145,22 @@
     },
     beforeUnmount () {
       window.removeEventListener('resize', this.setupCanvas)
+      this.cancelEnhancement()
+      this.cancelAnimation()
     },
     methods: {
+      cancelEnhancement () {
+        if (this.pendingEnhanceTimeout) {
+          clearTimeout(this.pendingEnhanceTimeout)
+          this.pendingEnhanceTimeout = null
+        }
+      },
+      cancelAnimation () {
+        if (this.activeAnimationFrame) {
+          cancelAnimationFrame(this.activeAnimationFrame)
+          this.activeAnimationFrame = null
+        }
+      },
       setupCanvas () {
         const canvas = this.$refs.canvasRef
         if (!canvas) return
@@ -175,6 +192,9 @@
       },
       startDrawing (event) {
         if (!this.isEnabled || !this.ctx) return
+
+        this.cancelEnhancement()
+        this.cancelAnimation()
 
         if (this.toolMode === 'pan') {
           this.panning = true
@@ -258,7 +278,13 @@
         }
 
         if (this.autoEnhanceEnabled && this.toolMode === 'draw') {
-          this.applySmartEnhancement(this.currentStroke)
+          const strokeToEnhance = this.currentStroke.map(point => ({ ...point }))
+          this.cancelEnhancement()
+          this.pendingEnhanceTimeout = setTimeout(() => {
+            this.pendingEnhanceTimeout = null
+            this.applySmartEnhancement(strokeToEnhance)
+            this.saveCurrentSketch()
+          }, this.enhanceDelayMs)
         }
 
         this.currentStroke = []
@@ -268,29 +294,16 @@
         if (!Array.isArray(stroke) || stroke.length < 8 || !this.ctx) return
 
         const bounds = this.getStrokeBounds(stroke)
-        const circle = this.detectCircle(stroke, bounds)
-        if (circle) {
-          this.clearBounds(bounds, 8)
-          this.ctx.beginPath()
-          this.ctx.lineWidth = this.strokeWidth
-          this.ctx.strokeStyle = this.strokeColor
-          this.ctx.arc(circle.cx, circle.cy, circle.radius, 0, Math.PI * 2)
-          this.ctx.stroke()
-          this.ctx.closePath()
+        const primitive = this.detectPrimitive(stroke, bounds)
+        if (primitive) {
+          this.animateTransformation(bounds, drawProgress => this.renderPrimitive(primitive, bounds, drawProgress), 8)
           return
         }
 
-        const symbol = this.detectSymbol(stroke, bounds)
+        const symbol = this.detectSymbol(stroke)
         if (!symbol) return
 
-        this.clearBounds(bounds, 10)
-        const fontSize = Math.max(18, Math.min(72, bounds.height * 1.2, bounds.width * 1.2))
-        this.ctx.globalCompositeOperation = 'source-over'
-        this.ctx.fillStyle = this.strokeColor
-        this.ctx.textAlign = 'center'
-        this.ctx.textBaseline = 'middle'
-        this.ctx.font = `600 ${fontSize}px "Segoe Script", "Comic Sans MS", cursive`
-        this.ctx.fillText(symbol, bounds.cx, bounds.cy)
+        this.animateTransformation(bounds, drawProgress => this.renderSymbol(symbol, bounds, drawProgress), 10)
       },
       detectCircle (stroke, bounds) {
         const widthHeightRatio = Math.abs(bounds.width - bounds.height) / Math.max(1, Math.max(bounds.width, bounds.height))
@@ -315,20 +328,251 @@
 
         return null
       },
-      detectSymbol (stroke, bounds) {
-        const isClosed = Math.hypot(
-          stroke[0].x - stroke.at(-1).x,
-          stroke[0].y - stroke.at(-1).y,
-        ) < Math.max(bounds.width, bounds.height) * 0.35
-        const aspect = bounds.width / Math.max(1, bounds.height)
+      detectPrimitive (stroke, bounds) {
+        const circle = this.detectCircle(stroke, bounds)
+        if (circle) return { type: 'circle', circle }
 
-        if (isClosed && aspect > 0.65 && aspect < 1.35) return 'O'
-        if (!isClosed && aspect < 0.45) return '1'
-        if (!isClosed && aspect > 1.4) return '-'
-        if (!isClosed && aspect > 0.45 && aspect < 0.75) return 'J'
-        if (!isClosed && aspect >= 0.75 && aspect <= 1.4) return 'A'
+        const normalized = this.normalizeStroke(stroke, 48)
+        const templates = this.getPrimitiveTemplates()
+        const best = this.findBestTemplate(normalized, templates)
+        if (!best || best.score > 0.19) return null
 
-        return null
+        return { type: best.value }
+      },
+      detectSymbol (stroke) {
+        const normalized = this.normalizeStroke(stroke, 56)
+        const candidates = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЫЭЮЯ'
+        const best = this.findBestGlyphMatch(normalized, candidates.split(''))
+        if (!best || best.score > 0.26) return null
+        return best.value
+      },
+      renderPrimitive (primitive, bounds, progress = 1) {
+        this.ctx.beginPath()
+        this.ctx.lineWidth = this.strokeWidth
+        this.ctx.strokeStyle = this.strokeColor
+        this.ctx.globalCompositeOperation = 'source-over'
+
+        if (primitive.type === 'circle' && primitive.circle) {
+          this.ctx.arc(primitive.circle.cx, primitive.circle.cy, primitive.circle.radius, 0, Math.PI * 2 * progress)
+          this.ctx.stroke()
+          this.ctx.closePath()
+          return
+        }
+
+        const path = {
+          line: [[0.1, 0.5], [0.9, 0.5]],
+          square: [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8], [0.2, 0.2]],
+          rectangle: [[0.12, 0.26], [0.88, 0.26], [0.88, 0.74], [0.12, 0.74], [0.12, 0.26]],
+          triangle: [[0.5, 0.15], [0.85, 0.82], [0.15, 0.82], [0.5, 0.15]],
+        }[primitive.type]
+
+        if (!path) return
+        const absolutePath = path.map(([x, y]) => ({
+          x: bounds.minX + bounds.width * x,
+          y: bounds.minY + bounds.height * y,
+        }))
+        this.drawProgressivePath(absolutePath, progress)
+      },
+      renderSymbol (symbol, bounds, progress = 1) {
+        const fontSize = Math.max(18, Math.min(72, bounds.height * 1.2, bounds.width * 1.2))
+        this.ctx.globalCompositeOperation = 'source-over'
+        this.ctx.fillStyle = this.strokeColor
+        this.ctx.textAlign = 'center'
+        this.ctx.textBaseline = 'middle'
+        this.ctx.font = `700 ${fontSize}px "Inter", "Segoe UI", "Arial", sans-serif`
+        this.ctx.globalAlpha = Math.max(0, Math.min(1, progress))
+        this.ctx.fillText(symbol, bounds.cx, bounds.cy)
+        this.ctx.globalAlpha = 1
+      },
+      drawProgressivePath (points, progress) {
+        if (!points?.length) return
+        const clamped = Math.max(0, Math.min(1, progress))
+        const segmentCount = points.length - 1
+        const target = segmentCount * clamped
+        const fullSegments = Math.floor(target)
+        const partial = target - fullSegments
+
+        this.ctx.moveTo(points[0].x, points[0].y)
+        for (let i = 0; i < fullSegments; i += 1) {
+          this.ctx.lineTo(points[i + 1].x, points[i + 1].y)
+        }
+
+        if (fullSegments < segmentCount) {
+          const start = points[fullSegments]
+          const end = points[fullSegments + 1]
+          this.ctx.lineTo(start.x + (end.x - start.x) * partial, start.y + (end.y - start.y) * partial)
+        }
+
+        this.ctx.stroke()
+        this.ctx.closePath()
+      },
+      animateTransformation (bounds, renderer, padding = 8) {
+        const snapshot = this.ctx.getImageData(
+          Math.max(0, Math.floor(bounds.minX - padding)),
+          Math.max(0, Math.floor(bounds.minY - padding)),
+          Math.max(1, Math.ceil(bounds.width + padding * 2)),
+          Math.max(1, Math.ceil(bounds.height + padding * 2)),
+        )
+        const x = Math.max(0, Math.floor(bounds.minX - padding))
+        const y = Math.max(0, Math.floor(bounds.minY - padding))
+        const w = Math.max(1, Math.ceil(bounds.width + padding * 2))
+        const h = Math.max(1, Math.ceil(bounds.height + padding * 2))
+
+        this.cancelAnimation()
+        const duration = 260
+        const startedAt = performance.now()
+
+        const frame = now => {
+          const elapsed = now - startedAt
+          const t = Math.max(0, Math.min(1, elapsed / duration))
+          const ease = 1 - Math.pow(1 - t, 3)
+
+          this.ctx.clearRect(x, y, w, h)
+          this.ctx.globalAlpha = 1 - ease
+          this.ctx.putImageData(snapshot, x, y)
+          this.ctx.globalAlpha = 1
+          renderer(ease)
+
+          if (t < 1) {
+            this.activeAnimationFrame = requestAnimationFrame(frame)
+          } else {
+            this.activeAnimationFrame = null
+            this.ctx.globalAlpha = 1
+          }
+        }
+
+        this.activeAnimationFrame = requestAnimationFrame(frame)
+      },
+      normalizeStroke (stroke, pointsCount = 48) {
+        if (!stroke?.length) return []
+        const sampled = this.resampleStroke(stroke, pointsCount)
+        const bounds = this.getStrokeBounds(sampled)
+        return sampled.map(point => ({
+          x: (point.x - bounds.minX) / Math.max(1, bounds.width),
+          y: (point.y - bounds.minY) / Math.max(1, bounds.height),
+        }))
+      },
+      resampleStroke (stroke, pointsCount) {
+        if (stroke.length <= 1) return stroke
+        const length = stroke.reduce((sum, point, index) => {
+          if (!index) return sum
+          return sum + Math.hypot(point.x - stroke[index - 1].x, point.y - stroke[index - 1].y)
+        }, 0)
+        const step = length / Math.max(1, pointsCount - 1)
+        const sampled = [stroke[0]]
+        let distance = 0
+        let previous = stroke[0]
+
+        for (let i = 1; i < stroke.length; i += 1) {
+          const current = stroke[i]
+          let segment = Math.hypot(current.x - previous.x, current.y - previous.y)
+
+          while (distance + segment >= step && sampled.length < pointsCount) {
+            const ratio = (step - distance) / Math.max(segment, 0.0001)
+            const point = {
+              x: previous.x + ratio * (current.x - previous.x),
+              y: previous.y + ratio * (current.y - previous.y),
+            }
+            sampled.push(point)
+            previous = point
+            segment = Math.hypot(current.x - previous.x, current.y - previous.y)
+            distance = 0
+          }
+
+          distance += segment
+          previous = current
+        }
+
+        while (sampled.length < pointsCount) {
+          sampled.push(stroke.at(-1))
+        }
+
+        return sampled
+      },
+      findBestTemplate (stroke, templates) {
+        let best = null
+        for (const template of templates) {
+          const templateStroke = this.resampleStroke(template.stroke, stroke.length)
+          const score = stroke.reduce((sum, point, index) => {
+            const target = templateStroke[index]
+            return sum + Math.hypot(point.x - target.x, point.y - target.y)
+          }, 0) / stroke.length
+          if (!best || score < best.score) {
+            best = { value: template.value, score }
+          }
+        }
+        return best
+      },
+      findBestGlyphMatch (stroke, candidates) {
+        const strokeImage = this.rasterizeStroke(stroke)
+        if (!strokeImage) return null
+
+        let best = null
+        for (const candidate of candidates) {
+          const glyphImage = this.rasterizeGlyph(candidate)
+          const score = this.compareImageData(strokeImage, glyphImage)
+          if (!best || score < best.score) {
+            best = { value: candidate, score }
+          }
+        }
+
+        return best
+      },
+      rasterizeStroke (stroke) {
+        const canvas = document.createElement('canvas')
+        canvas.width = 64
+        canvas.height = 64
+        const context = canvas.getContext('2d')
+        if (!context || stroke.length < 2) return null
+
+        context.clearRect(0, 0, 64, 64)
+        context.beginPath()
+        context.lineWidth = 7
+        context.lineCap = 'round'
+        context.lineJoin = 'round'
+        context.strokeStyle = '#000'
+        context.moveTo(stroke[0].x * 52 + 6, stroke[0].y * 52 + 6)
+
+        for (let i = 1; i < stroke.length; i += 1) {
+          context.lineTo(stroke[i].x * 52 + 6, stroke[i].y * 52 + 6)
+        }
+
+        context.stroke()
+        return context.getImageData(0, 0, 64, 64)
+      },
+      rasterizeGlyph (glyph) {
+        const canvas = document.createElement('canvas')
+        canvas.width = 64
+        canvas.height = 64
+        const context = canvas.getContext('2d')
+
+        context.clearRect(0, 0, 64, 64)
+        context.fillStyle = '#000'
+        context.textAlign = 'center'
+        context.textBaseline = 'middle'
+        context.font = '700 46px "Inter", "Segoe UI", Arial, sans-serif'
+        context.fillText(glyph, 32, 34)
+
+        return context.getImageData(0, 0, 64, 64)
+      },
+      compareImageData (a, b) {
+        const alphaIndex = 3
+        let diff = 0
+        for (let i = alphaIndex; i < a.data.length; i += 4) {
+          const valueA = a.data[i] / 255
+          const valueB = b.data[i] / 255
+          diff += Math.abs(valueA - valueB)
+        }
+
+        return diff / (a.data.length / 4)
+      },
+      getPrimitiveTemplates () {
+        return [
+          { value: 'line', stroke: [{ x: 0.1, y: 0.5 }, { x: 0.9, y: 0.5 }] },
+          { value: 'square', stroke: [{ x: 0.2, y: 0.2 }, { x: 0.8, y: 0.2 }, { x: 0.8, y: 0.8 }, { x: 0.2, y: 0.8 }, { x: 0.2, y: 0.2 }] },
+          { value: 'rectangle', stroke: [{ x: 0.1, y: 0.3 }, { x: 0.9, y: 0.3 }, { x: 0.9, y: 0.7 }, { x: 0.1, y: 0.7 }, { x: 0.1, y: 0.3 }] },
+          { value: 'triangle', stroke: [{ x: 0.5, y: 0.1 }, { x: 0.9, y: 0.85 }, { x: 0.1, y: 0.85 }, { x: 0.5, y: 0.1 }] },
+        ]
       },
       getStrokeBounds (stroke) {
         const xs = stroke.map(point => point.x)

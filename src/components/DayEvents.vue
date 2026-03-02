@@ -781,6 +781,10 @@ export default {
   z-index: 200;
 }
 
+:deep(.v-calendar-daily_head-weekday) {
+  display: none;
+}
+
 .event-category {
   font-size: 11px;
   background: rgb(var(--v-theme-surface));

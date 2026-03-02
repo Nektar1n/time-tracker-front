@@ -355,7 +355,17 @@
 
         this.dayScrollTop = el.scrollTop
         this.dayScrollHeight = el.scrollHeight
-        this.sketchTopOffset = el.offsetTop
+
+        const stageRect = this.$el
+          ?.querySelector('.day-events-stage')
+          ?.getBoundingClientRect?.()
+        const scrollRect = el.getBoundingClientRect()
+
+        if (stageRect) {
+          this.sketchTopOffset = Math.max(0, scrollRect.top - stageRect.top)
+        } else {
+          this.sketchTopOffset = el.offsetTop
+        }
       },
       onInternalScroll (event) {
         this.updateSketchMetrics(event.target)
@@ -718,6 +728,15 @@
 }
 
 :deep(.v-event:not(.v-event-timed)) {
+  z-index: 200;
+}
+
+:deep(.v-calendar-daily__head),
+:deep(.v-calendar-daily__intervals-head),
+:deep(.v-calendar-daily_head-day),
+:deep(.v-calendar-daily_head-weekday),
+:deep(.v-calendar-daily_head-day-label) {
+  position: relative;
   z-index: 200;
 }
 

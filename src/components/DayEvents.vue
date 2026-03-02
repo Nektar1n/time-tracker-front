@@ -722,7 +722,10 @@
 }
 
 :deep(.v-calendar-daily__head),
-:deep(.v-calendar-daily__intervals-head) {
+:deep(.v-calendar-daily__intervals-head),
+:deep(.v-calendar-daily_head-day),
+:deep(.v-calendar-daily_head-weekday),
+:deep(.v-calendar-daily_head-day-label) {
   position: relative;
   z-index: 200;
 }

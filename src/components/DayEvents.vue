@@ -721,6 +721,12 @@
   z-index: 200;
 }
 
+:deep(.v-calendar-daily__head),
+:deep(.v-calendar-daily__intervals-head) {
+  position: relative;
+  z-index: 200;
+}
+
 .event-category {
   font-size: 11px;
   background: rgb(var(--v-theme-surface));

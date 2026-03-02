@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-sheet class="d-flex" tile>
-      <v-btn class="ma-2" icon variant="text" @click="next()">
+      <v-btn class="ma-2" icon variant="text" @click="onLeftNavClick">
         <v-icon>mdi-chevron-left</v-icon>
       </v-btn>
       <p>
@@ -17,7 +17,7 @@
         variant="outlined"
       />
       <v-spacer />
-      <v-btn class="ma-2" icon variant="text" @click="prev()">
+      <v-btn class="ma-2" icon variant="text" @click="onRightNavClick">
         <v-icon>mdi-chevron-right</v-icon>
       </v-btn>
     </v-sheet>
@@ -34,7 +34,8 @@
         :weekdays="weekday"
         @change="getEvents"
         @click:date="viewDay"
-        @click:event="openEditEvent"
+        @click:event="openEventAction"
+        @click:more="openMoreAction"
         @mousedown:event="startDrag"
         @mousedown:time="startTime"
         @mouseleave="cancelDrag"
@@ -238,7 +239,7 @@
           if (!value || value.source === 'week-calendar') return
           if (this.type !== 'week') return
 
-          this.applySyncedScroll(value.top)
+          this.applySyncedScroll(value.top, value.behavior || 'auto')
         },
       },
     },
@@ -299,15 +300,34 @@
           top: event.target.scrollTop,
         })
       },
-      applySyncedScroll (top) {
+      applySyncedScroll (top, behavior = 'auto') {
         const el = this.getScrollElement()
         if (!el) return
 
         this.suppressScrollEmit = true
-        el.scrollTop = top
+        el.scrollTo({
+          top,
+          behavior,
+        })
         requestAnimationFrame(() => {
           this.suppressScrollEmit = false
         })
+      },
+      onLeftNavClick () {
+        if (this.type === 'week') {
+          this.prev()
+          return
+        }
+
+        this.next()
+      },
+      onRightNavClick () {
+        if (this.type === 'week') {
+          this.next()
+          return
+        }
+
+        this.prev()
       },
       isActiveDate (date) {
         return this.normalizeDate(date) === this.normalizeDate(this.focus)
@@ -320,6 +340,61 @@
         if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
 
         return String(value).slice(0, 10)
+      },
+      openEventAction (nativeEvent, payload) {
+        const event = payload?.event
+        if (!event) return
+
+        if (this.type === 'month') {
+          this.jumpToWeekDate(event.start, event.start)
+          nativeEvent?.stopPropagation?.()
+          return
+        }
+
+        this.openEditEvent(nativeEvent, payload)
+      },
+      openMoreAction (nativeEvent, payload) {
+        if (this.type !== 'month') return
+
+        const dayDate = payload?.date || payload?.day?.date || payload?.day
+        const events = Array.isArray(payload?.events) ? payload.events : []
+        const [firstEvent] = events
+          .map(item => ({ ...item, startAt: new Date(item.start) }))
+          .filter(item => !Number.isNaN(item.startAt.getTime()))
+          .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+
+        this.jumpToWeekDate(dayDate, firstEvent?.startAt || dayDate)
+        nativeEvent?.stopPropagation?.()
+      },
+      jumpToWeekDate (dateValue, scrollDateValue = dateValue) {
+        const focusDate = new Date(dateValue)
+        if (Number.isNaN(focusDate.getTime())) return
+
+        this.type = 'week'
+        this.viewDay(focusDate)
+
+        this.$nextTick(() => {
+          this.bindScrollSync()
+          const targetTop = this.getScrollTopForDate(scrollDateValue)
+          this.applySyncedScroll(targetTop, 'smooth')
+          this.$emit('sync-scroll', {
+            source: 'week-calendar',
+            top: targetTop,
+            behavior: 'smooth',
+          })
+        })
+      },
+      getScrollTopForDate (dateValue) {
+        const date = new Date(dateValue)
+        if (Number.isNaN(date.getTime())) return 0
+
+        const el = this.getScrollElement()
+        if (!el) return 0
+
+        const totalMinutes = date.getHours() * 60 + date.getMinutes()
+        const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight)
+
+        return Math.round((totalMinutes / (24 * 60)) * maxScrollTop)
       },
       openEditEvent (nativeEvent, payload) {
         const event = payload?.event

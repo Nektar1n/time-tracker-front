@@ -10,7 +10,17 @@
       >
         <v-btn size="small" value="draw">Кисть</v-btn>
         <v-btn size="small" value="erase">Ластик</v-btn>
+        <v-btn size="small" value="pan">Скролл</v-btn>
       </v-btn-toggle>
+      <v-switch
+        v-model="autoEnhanceEnabled"
+        class="sketch-auto-switch"
+        color="primary"
+        density="compact"
+        hide-details
+        inset
+        label="AI авто"
+      />
       <v-select
         v-model="strokeColor"
         class="sketch-control"
@@ -35,6 +45,7 @@
     <canvas
       ref="canvasRef"
       class="sketch-canvas"
+      :class="{ 'sketch-canvas--pan': toolMode === 'pan' && isEnabled }"
       :style="canvasStyle"
       @pointerdown="startDrawing"
       @pointerleave="stopDrawing"
@@ -84,9 +95,15 @@
           { title: 'Красный', value: '#C62828' },
         ],
         drawing: false,
+        panning: false,
         ctx: null,
         drawingsByDay: {},
         previousPoint: null,
+        currentStroke: [],
+        panStart: null,
+        scrollStart: null,
+        autoEnhanceEnabled: true,
+        scrollElement: null,
         canvasSize: {
           width: 0,
           height: 0,
@@ -120,6 +137,7 @@
     mounted () {
       this.drawingsByDay = this.readStorage()
       this.setupCanvas()
+      this.scrollElement = this.resolveScrollElement()
       window.addEventListener('resize', this.setupCanvas)
     },
     beforeUnmount () {
@@ -158,6 +176,17 @@
       startDrawing (event) {
         if (!this.isEnabled || !this.ctx) return
 
+        if (this.toolMode === 'pan') {
+          this.panning = true
+          this.panStart = { x: event.clientX, y: event.clientY }
+          this.scrollStart = {
+            left: this.scrollElement?.scrollLeft || 0,
+            top: this.scrollElement?.scrollTop || 0,
+          }
+          event.target.setPointerCapture(event.pointerId)
+          return
+        }
+
         const point = this.canvasPosition(event)
         this.ctx.beginPath()
         this.ctx.moveTo(point.x, point.y)
@@ -175,11 +204,25 @@
         }
 
         this.previousPoint = point
+        this.currentStroke = [point]
         this.drawing = true
         event.target.setPointerCapture(event.pointerId)
       },
       draw (event) {
-        if (!this.isEnabled || !this.drawing || !this.ctx) return
+        if (!this.isEnabled || !this.ctx) return
+
+        if (this.panning && this.scrollElement && this.panStart && this.scrollStart) {
+          const deltaX = event.clientX - this.panStart.x
+          const deltaY = event.clientY - this.panStart.y
+          this.scrollElement.scrollTo({
+            left: this.scrollStart.left - deltaX,
+            top: this.scrollStart.top - deltaY,
+            behavior: 'auto',
+          })
+          return
+        }
+
+        if (!this.drawing) return
 
         const point = this.canvasPosition(event)
         const prev = this.previousPoint || point
@@ -190,8 +233,19 @@
         this.ctx.stroke()
 
         this.previousPoint = point
+        this.currentStroke.push(point)
       },
       stopDrawing (event) {
+        if (this.panning) {
+          this.panning = false
+          this.panStart = null
+          this.scrollStart = null
+          if (event?.target?.hasPointerCapture?.(event.pointerId)) {
+            event.target.releasePointerCapture(event.pointerId)
+          }
+          return
+        }
+
         if (!this.drawing || !this.ctx) return
 
         this.drawing = false
@@ -202,7 +256,125 @@
         if (event?.target?.hasPointerCapture?.(event.pointerId)) {
           event.target.releasePointerCapture(event.pointerId)
         }
+
+        if (this.autoEnhanceEnabled && this.toolMode === 'draw') {
+          this.applySmartEnhancement(this.currentStroke)
+        }
+
+        this.currentStroke = []
         this.saveCurrentSketch()
+      },
+      applySmartEnhancement (stroke) {
+        if (!Array.isArray(stroke) || stroke.length < 8 || !this.ctx) return
+
+        const bounds = this.getStrokeBounds(stroke)
+        const circle = this.detectCircle(stroke, bounds)
+        if (circle) {
+          this.clearBounds(bounds, 8)
+          this.ctx.beginPath()
+          this.ctx.lineWidth = this.strokeWidth
+          this.ctx.strokeStyle = this.strokeColor
+          this.ctx.arc(circle.cx, circle.cy, circle.radius, 0, Math.PI * 2)
+          this.ctx.stroke()
+          this.ctx.closePath()
+          return
+        }
+
+        const symbol = this.detectSymbol(stroke, bounds)
+        if (!symbol) return
+
+        this.clearBounds(bounds, 10)
+        const fontSize = Math.max(18, Math.min(72, bounds.height * 1.2, bounds.width * 1.2))
+        this.ctx.globalCompositeOperation = 'source-over'
+        this.ctx.fillStyle = this.strokeColor
+        this.ctx.textAlign = 'center'
+        this.ctx.textBaseline = 'middle'
+        this.ctx.font = `600 ${fontSize}px "Segoe Script", "Comic Sans MS", cursive`
+        this.ctx.fillText(symbol, bounds.cx, bounds.cy)
+      },
+      detectCircle (stroke, bounds) {
+        const widthHeightRatio = Math.abs(bounds.width - bounds.height) / Math.max(1, Math.max(bounds.width, bounds.height))
+        const first = stroke[0]
+        const last = stroke.at(-1)
+        const closure = Math.hypot(last.x - first.x, last.y - first.y)
+
+        const cx = bounds.cx
+        const cy = bounds.cy
+        const radii = stroke.map(point => Math.hypot(point.x - cx, point.y - cy))
+        const mean = radii.reduce((sum, radius) => sum + radius, 0) / radii.length
+        const variance = radii.reduce((sum, radius) => sum + Math.abs(radius - mean), 0) / radii.length
+        const normalizedVariance = variance / Math.max(1, mean)
+
+        if (widthHeightRatio < 0.35 && closure < mean * 0.65 && normalizedVariance < 0.35) {
+          return {
+            cx,
+            cy,
+            radius: mean,
+          }
+        }
+
+        return null
+      },
+      detectSymbol (stroke, bounds) {
+        const isClosed = Math.hypot(
+          stroke[0].x - stroke.at(-1).x,
+          stroke[0].y - stroke.at(-1).y,
+        ) < Math.max(bounds.width, bounds.height) * 0.35
+        const aspect = bounds.width / Math.max(1, bounds.height)
+
+        if (isClosed && aspect > 0.65 && aspect < 1.35) return 'O'
+        if (!isClosed && aspect < 0.45) return '1'
+        if (!isClosed && aspect > 1.4) return '-'
+        if (!isClosed && aspect > 0.45 && aspect < 0.75) return 'J'
+        if (!isClosed && aspect >= 0.75 && aspect <= 1.4) return 'A'
+
+        return null
+      },
+      getStrokeBounds (stroke) {
+        const xs = stroke.map(point => point.x)
+        const ys = stroke.map(point => point.y)
+        const minX = Math.min(...xs)
+        const maxX = Math.max(...xs)
+        const minY = Math.min(...ys)
+        const maxY = Math.max(...ys)
+
+        return {
+          minX,
+          maxX,
+          minY,
+          maxY,
+          width: Math.max(1, maxX - minX),
+          height: Math.max(1, maxY - minY),
+          cx: (minX + maxX) / 2,
+          cy: (minY + maxY) / 2,
+        }
+      },
+      clearBounds (bounds, padding = 6) {
+        this.ctx.clearRect(
+          bounds.minX - padding,
+          bounds.minY - padding,
+          bounds.width + padding * 2,
+          bounds.height + padding * 2,
+        )
+      },
+      resolveScrollElement () {
+        const stage = this.$el?.closest?.('.day-events-stage')
+        if (!stage) return null
+
+        const selectors = [
+          '.v-calendar-daily__scroll-area',
+          '.v-calendar-daily__body',
+          '.v-calendar-weekly__scroll-area',
+        ]
+
+        for (const selector of selectors) {
+          const node = stage.querySelector(selector)
+          if (node && node.scrollHeight > node.clientHeight) return node
+        }
+
+        return Array.from(stage.querySelectorAll('div')).find(
+          node => node.scrollHeight > node.clientHeight + 5,
+        ) || null
       },
       saveCurrentSketch () {
         const canvas = this.$refs.canvasRef
@@ -268,7 +440,7 @@
 .sketch-overlay {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 450;
   overflow: hidden;
   pointer-events: none;
 }
@@ -281,7 +453,7 @@
   position: absolute;
   top: 8px;
   right: 12px;
-  z-index: 6;
+  z-index: 700;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -298,6 +470,10 @@
   max-width: 180px;
 }
 
+.sketch-auto-switch {
+  min-width: 120px;
+}
+
 .sketch-slider {
   width: 120px;
 }
@@ -307,5 +483,13 @@
   display: block;
   touch-action: none;
   cursor: crosshair;
+}
+
+.sketch-overlay--active .sketch-canvas {
+  cursor: crosshair;
+}
+
+.sketch-canvas--pan {
+  cursor: grab;
 }
 </style>

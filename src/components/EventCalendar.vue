@@ -35,6 +35,7 @@
         @change="getEvents"
         @click:date="viewDay"
         @click:event="openEventAction"
+        @click:more="openMoreAction"
         @mousedown:event="startDrag"
         @mousedown:time="startTime"
         @mouseleave="cancelDrag"
@@ -345,21 +346,36 @@
         if (!event) return
 
         if (this.type === 'month') {
-          this.jumpToWeekEvent(event)
-          nativeEvent.stopPropagation()
+          this.jumpToWeekDate(event.start, event.start)
+          nativeEvent?.stopPropagation?.()
           return
         }
 
         this.openEditEvent(nativeEvent, payload)
       },
-      jumpToWeekEvent (event) {
-        const startDate = new Date(event.start)
+      openMoreAction (nativeEvent, payload) {
+        if (this.type !== 'month') return
+
+        const dayDate = payload?.date || payload?.day?.date || payload?.day
+        const events = Array.isArray(payload?.events) ? payload.events : []
+        const [firstEvent] = events
+          .map(item => ({ ...item, startAt: new Date(item.start) }))
+          .filter(item => !Number.isNaN(item.startAt.getTime()))
+          .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+
+        this.jumpToWeekDate(dayDate, firstEvent?.startAt || dayDate)
+        nativeEvent?.stopPropagation?.()
+      },
+      jumpToWeekDate (dateValue, scrollDateValue = dateValue) {
+        const focusDate = new Date(dateValue)
+        if (Number.isNaN(focusDate.getTime())) return
+
         this.type = 'week'
-        this.viewDay(startDate)
+        this.viewDay(focusDate)
 
         this.$nextTick(() => {
           this.bindScrollSync()
-          const targetTop = this.getScrollTopForDate(startDate)
+          const targetTop = this.getScrollTopForDate(scrollDateValue)
           this.applySyncedScroll(targetTop, 'smooth')
           this.$emit('sync-scroll', {
             source: 'week-calendar',
